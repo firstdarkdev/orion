@@ -16,7 +16,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(8)
 
 if (System.getenv('BUILD_NUMBER') != null) {
     var build = (System.getenv('BUILD_NUMBER').toInteger() - 1)
-    version = "{version_major}.${version_minor}.${build}"
+    version = "${version_major}.${version_minor}.${build}"
 }
 
 configurations {
