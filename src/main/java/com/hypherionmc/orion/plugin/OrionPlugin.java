@@ -79,7 +79,7 @@ public class OrionPlugin implements Plugin<Project> {
      * @param project The project to apply this logic to.
      */
     private void registerCleanup(Project project) {
-        project.task("clean").doLast(c -> {
+        project.getTasks().getByName("clean").doLast(c -> {
             c.getLogger().lifecycle("Cleaning Artifact Directory");
             File outputDir = new File(project.getRootProject().getRootDir(), "artifacts");
             if (outputDir.exists()) {
@@ -94,6 +94,9 @@ public class OrionPlugin implements Plugin<Project> {
      */
     @SuppressWarnings({"deprecation", "ResultOfMethodCallIgnored"})
     private void registerCopyLogic(Project project) {
+        if (project.getName().equalsIgnoreCase("common") || project.getRootProject() == project)
+            return;
+
         project.getTasks().getByName("build").doLast(c -> {
             File artifactDir = new File(project.getRootProject().getRootDir(), "artifacts");
             File libsDir = new File(project.getBuildDir(), "libs");

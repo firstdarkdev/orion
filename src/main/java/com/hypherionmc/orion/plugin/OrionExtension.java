@@ -45,7 +45,13 @@ public class OrionExtension {
             versioning.patch(Integer.parseInt(project.getProperties().get("version_patch").toString()));
 
         if (project.hasProperty("release") && project.getProperties().get("release").toString().equalsIgnoreCase("true"))
-            versioning.identifier("release");
+            versioning.uploadBuild(true);
+
+        if (System.getenv("BUILD_NUMBER") != null)
+            versioning.build(Integer.parseInt(System.getenv("BUILD_NUMBER")) - 1);
+
+        if (project.hasProperty("version_build"))
+            versioning.build(Integer.parseInt(project.getProperties().get("version_build").toString()));
 
         // Set default values for extension
         this.enableReleasesMaven = project.getObjects().property(Boolean.class).convention(false);
@@ -88,7 +94,9 @@ public class OrionExtension {
         private int major = 1;
         private int minor = 0;
         private int patch = 0;
+        private int build = 0;
         private String identifier = "release";
+        private boolean isUploadBuild = false;
 
         /**
          * Manually configure the MAJOR version value
@@ -115,6 +123,18 @@ public class OrionExtension {
         }
 
         /**
+         * Manually configure the BUILD version value
+         * @param build In semver format, for example 1
+         */
+        public void build(int build) {
+            this.build = build;
+        }
+
+        public void uploadBuild(boolean val) {
+            this.isUploadBuild = val;
+        }
+
+        /**
          * Set the release identifier. For example, porting, snapshots, etc
          * @param identifier The identifier. Defaults to release, or snapshots when on CI
          */
@@ -130,9 +150,7 @@ public class OrionExtension {
         public String buildVersion() {
             String v = "%s.%s.%s";
 
-            if (System.getenv("BUILD_NUMBER") != null
-                    && (identifier.equalsIgnoreCase("port") || identifier.equalsIgnoreCase("snapshot"))) {
-                int build = Integer.parseInt(System.getenv("BUILD_NUMBER")) - 1;
+            if (!isUploadBuild) {
                 v += "+" + identifier + "." + build;
             }
 
