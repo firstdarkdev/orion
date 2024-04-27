@@ -54,6 +54,7 @@ public class DopplerUtils {
                 });
             }
         } catch (Exception e) {
+            e.printStackTrace();
             throw new GradleException(e.getMessage());
         }
     }
