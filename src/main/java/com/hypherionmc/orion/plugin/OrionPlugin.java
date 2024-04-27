@@ -28,7 +28,6 @@ public class OrionPlugin implements Plugin<Project> {
     public void apply(@NotNull Project target) {
         // Register and apply the gradle extension.
         OrionExtension extension = target.getExtensions().create("orion", OrionExtension.class);
-        target.getExtensions().add("orion", extension);
 
         // Register the cleanup logic for multi-platform projects
         registerCleanup(target);
