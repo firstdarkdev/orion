@@ -43,15 +43,7 @@ public class DopplerUtils {
                 if (values.isEmpty())
                     return;
 
-                values.forEach((k, v) -> {
-                    // Replace any local variables, with their doppler values
-                    if (System.getenv().containsKey(k)) {
-                        System.getenv().replace(k, v);
-                    } else {
-                        // Variable doesn't exist, so we add it
-                        System.getenv().put(k, v);
-                    }
-                });
+                Environment.setVariables(values);
             }
         } catch (Exception e) {
             e.printStackTrace();

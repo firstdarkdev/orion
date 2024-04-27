@@ -7,11 +7,13 @@
 package com.hypherionmc.orion.plugin;
 
 import com.hypherionmc.orion.Constants;
+import com.hypherionmc.orion.utils.Environment;
 import lombok.Getter;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.provider.Property;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * @author HypherionSA
@@ -47,8 +49,8 @@ public class OrionExtension {
         if (project.hasProperty("release") && project.getProperties().get("release").toString().equalsIgnoreCase("true"))
             versioning.uploadBuild(true);
 
-        if (System.getenv("BUILD_NUMBER") != null)
-            versioning.build(Integer.parseInt(System.getenv("BUILD_NUMBER")) - 1);
+        if (Environment.getenv("BUILD_NUMBER") != null)
+            versioning.build(Integer.parseInt(Environment.getenv("BUILD_NUMBER")) - 1);
 
         if (project.hasProperty("version_build"))
             versioning.build(Integer.parseInt(project.getProperties().get("version_build").toString()));
@@ -69,6 +71,11 @@ public class OrionExtension {
         action.execute(versioning);
     }
 
+    @Nullable
+    public String getenv(String key) {
+        return Environment.getenv(key);
+    }
+
     /**
      * Configure Maven for publishing. This defaults to releases, or snapshots for porting/snapshot builds
      * @return The configured maven repository
@@ -79,8 +86,8 @@ public class OrionExtension {
             mavenArtifactRepository.setUrl((versioning.identifier.equalsIgnoreCase("snapshot") || versioning.identifier.equalsIgnoreCase("port")) ? Constants.MAVEN_SNAPSHOT_URL : Constants.MAVEN_URL);
 
             mavenArtifactRepository.credentials(c -> {
-                c.setUsername(System.getenv("MAVEN_USER"));
-                c.setPassword(System.getenv("MAVEN_PASS"));
+                c.setUsername(Environment.getenv("MAVEN_USER"));
+                c.setPassword(Environment.getenv("MAVEN_PASS"));
             });
         };
     }
