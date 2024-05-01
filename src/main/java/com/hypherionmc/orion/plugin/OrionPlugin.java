@@ -33,45 +33,51 @@ public class OrionPlugin implements Plugin<Project> {
         registerCleanup(target);
 
         // Doppler support. Pull ENV Variables from Doppler. Only done on the ROOT project
-        target.getRootProject().beforeEvaluate(c -> {
+        target.beforeEvaluate(c -> {
             if (!extension.getDopplerToken().get().equalsIgnoreCase("INVALID")) {
                 DopplerUtils.installDopplerEnvironment(extension.getDopplerToken().get());
             }
         });
 
-        target.getRootProject().allprojects(p -> p.beforeEvaluate(c -> {
-            // Set the group and version on all projects
-            p.setGroup(p.getRootProject().getGroup());
-            p.setVersion(extension.getVersioning().buildVersion());
+        if (target.getRootProject() != target) {
+            target.getRootProject().allprojects(p -> p.beforeEvaluate(c -> configureProject(p, extension)));
+        } else {
+            target.afterEvaluate(c -> configureProject(target, extension));
+        }
+    }
 
-            // Configure the artifact copying logic for multi-platform projects
-            if (extension.getMultiProject().get())
-                registerCopyLogic(p);
+    private void configureProject(Project p, OrionExtension extension) {
+        // Set the group and version on all projects
+        p.setGroup(p.getRootProject().getGroup());
+        p.setVersion(extension.getVersioning().buildVersion());
 
-            // Add our releases maven
-            if (extension.getEnableReleasesMaven().get()) {
-                p.getRepositories().maven(m -> {
-                    m.setName("First Dark Dev Maven");
-                    m.setUrl(Constants.MAVEN_URL);
-                });
-            }
+        // Configure the artifact copying logic for multi-platform projects
+        if (extension.getMultiProject().get())
+            registerCopyLogic(p);
 
-            // Add our snapshot maven
-            if (extension.getEnableSnapshotsMaven().get()) {
-                p.getRepositories().maven(m -> {
-                    m.setName("First Dark Dev Snapshots Maven");
-                    m.setUrl(Constants.MAVEN_SNAPSHOT_URL);
-                });
-            }
+        // Add our releases maven
+        if (extension.getEnableReleasesMaven().get()) {
+            p.getRepositories().maven(m -> {
+                m.setName("First Dark Dev Maven");
+                m.setUrl(Constants.MAVEN_URL);
+            });
+        }
 
-            // Add our mirror maven
-            if (extension.getEnableMirrorMaven().get()) {
-                p.getRepositories().maven(m -> {
-                    m.setName("First Dark Dev Mirror");
-                    m.setUrl(Constants.MAVEN_CENTRAL_URL);
-                });
-            }
-        }));
+        // Add our snapshot maven
+        if (extension.getEnableSnapshotsMaven().get()) {
+            p.getRepositories().maven(m -> {
+                m.setName("First Dark Dev Snapshots Maven");
+                m.setUrl(Constants.MAVEN_SNAPSHOT_URL);
+            });
+        }
+
+        // Add our mirror maven
+        if (extension.getEnableMirrorMaven().get()) {
+            p.getRepositories().maven(m -> {
+                m.setName("First Dark Dev Mirror");
+                m.setUrl(Constants.MAVEN_CENTRAL_URL);
+            });
+        }
     }
 
     /**
