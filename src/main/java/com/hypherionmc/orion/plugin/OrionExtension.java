@@ -82,8 +82,7 @@ public class OrionExtension {
      */
     public Action<? extends MavenArtifactRepository> getPublishingMaven() {
         return (Action<MavenArtifactRepository>) mavenArtifactRepository -> {
-            mavenArtifactRepository.setName("fddmaven");
-            mavenArtifactRepository.setUrl((versioning.identifier.equalsIgnoreCase("snapshot") || versioning.identifier.equalsIgnoreCase("port")) ? Constants.MAVEN_SNAPSHOT_URL : Constants.MAVEN_URL);
+            mavenArtifactRepository.setUrl(!versioning.identifier.equalsIgnoreCase("release") ? Constants.MAVEN_SNAPSHOT_URL : Constants.MAVEN_URL);
 
             mavenArtifactRepository.credentials(c -> {
                 c.setUsername(Environment.getenv("MAVEN_USER"));
