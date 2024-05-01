@@ -8,11 +8,14 @@ package com.hypherionmc.orion.plugin;
 
 import com.hypherionmc.orion.Constants;
 import com.hypherionmc.orion.utils.Environment;
+import com.hypherionmc.orion.utils.GradleUtils;
+import groovy.lang.Closure;
 import lombok.Getter;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.provider.Property;
+import org.gradle.util.internal.ConfigureUtil;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -69,6 +72,21 @@ public class OrionExtension {
      */
     public void versioning(Action<Versioning> action) {
         action.execute(versioning);
+    }
+
+    /**
+     * Helper method to force the plugin to configure and apply everything early
+     */
+    public void setup(Closure<?> closure) {
+        ConfigureUtil.configure(closure, this);
+        postConfiguration();
+    }
+
+    /**
+     * Do plugin configuration as soon as orion.setup is called
+     */
+    private void postConfiguration() {
+        GradleUtils.INSTANCE.configureProject(this.project, this);
     }
 
     @Nullable
