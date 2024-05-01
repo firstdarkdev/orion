@@ -33,16 +33,16 @@ public class OrionPlugin implements Plugin<Project> {
         registerCleanup(target);
 
         // Doppler support. Pull ENV Variables from Doppler. Only done on the ROOT project
-        target.getRootProject().afterEvaluate(c -> {
+        target.getRootProject().beforeEvaluate(c -> {
             if (!extension.getDopplerToken().get().equalsIgnoreCase("INVALID")) {
                 DopplerUtils.installDopplerEnvironment(extension.getDopplerToken().get());
             }
         });
 
-        target.allprojects(p -> p.afterEvaluate(c -> {
+        target.getRootProject().allprojects(p -> p.beforeEvaluate(c -> {
             // Set the group and version on all projects
-            c.setGroup(p.getRootProject().getGroup());
-            c.setVersion(extension.getVersioning().buildVersion());
+            p.setGroup(p.getRootProject().getGroup());
+            p.setVersion(extension.getVersioning().buildVersion());
 
             // Configure the artifact copying logic for multi-platform projects
             if (extension.getMultiProject().get())
@@ -50,7 +50,7 @@ public class OrionPlugin implements Plugin<Project> {
 
             // Add our releases maven
             if (extension.getEnableReleasesMaven().get()) {
-                c.getRepositories().maven(m -> {
+                p.getRepositories().maven(m -> {
                     m.setName("First Dark Dev Maven");
                     m.setUrl(Constants.MAVEN_URL);
                 });
@@ -58,17 +58,17 @@ public class OrionPlugin implements Plugin<Project> {
 
             // Add our snapshot maven
             if (extension.getEnableSnapshotsMaven().get()) {
-                c.getRepositories().maven(m -> {
-                   m.setName("First Dark Dev Snapshots Maven");
-                   m.setUrl(Constants.MAVEN_SNAPSHOT_URL);
+                p.getRepositories().maven(m -> {
+                    m.setName("First Dark Dev Snapshots Maven");
+                    m.setUrl(Constants.MAVEN_SNAPSHOT_URL);
                 });
             }
 
             // Add our mirror maven
             if (extension.getEnableMirrorMaven().get()) {
-                c.getRepositories().maven(m -> {
-                   m.setName("First Dark Dev Mirror");
-                   m.setUrl(Constants.MAVEN_CENTRAL_URL);
+                p.getRepositories().maven(m -> {
+                    m.setName("First Dark Dev Mirror");
+                    m.setUrl(Constants.MAVEN_CENTRAL_URL);
                 });
             }
         }));
