@@ -21,13 +21,16 @@ if (System.getenv('BUILD_NUMBER') != null) {
 
 configurations {
     shadeMe
-    implementation.extendsFrom shadeMe
+    compileOnly.extendsFrom shadeMe
 }
 
 repositories {
     mavenCentral()
     maven {
         url "https://maven.firstdark.dev/releases"
+    }
+    maven {
+        url "https://mcentral.firstdark.dev/releases"
     }
 }
 
@@ -36,6 +39,9 @@ dependencies {
 
     shadeMe "com.squareup.okhttp3:okhttp:${okhttp}"
     shadeMe "com.google.code.gson:gson:${gson}"
+    shadeMe "net.minecraftforge:DiffPatch:${diffpatch}:all"
+    shadeMe "org.eclipse.jgit:org.eclipse.jgit:${jgit}"
+    shadeMe "commons-io:commons-io:${commons_io}"
 
     // Lombok
     compileOnly "org.projectlombok:lombok:${lombok}"
