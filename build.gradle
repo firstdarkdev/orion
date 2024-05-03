@@ -32,6 +32,9 @@ repositories {
     maven {
         url "https://mcentral.firstdark.dev/releases"
     }
+    maven {
+        url "https://maven.covers1624.net"
+    }
 }
 
 dependencies {
@@ -39,7 +42,7 @@ dependencies {
 
     shadeMe "com.squareup.okhttp3:okhttp:${okhttp}"
     shadeMe "com.google.code.gson:gson:${gson}"
-    shadeMe "net.minecraftforge:DiffPatch:${diffpatch}:all"
+    shadeMe "codechicken:DiffPatch:${diffpatch}:all"
     shadeMe "org.eclipse.jgit:org.eclipse.jgit:${jgit}"
     shadeMe "commons-io:commons-io:${commons_io}"
 

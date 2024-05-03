@@ -26,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.logging.Level;
 
 /**
  * @author HypherionSA
@@ -98,7 +97,6 @@ public class Patcher {
                 .aPath(Constants.patcherUpstream)
                 .bPath(Constants.patcherWorkdir)
                 .outputPath(new File(project.getRootProject().getRootDir(), "patches").toPath(), null)
-                .verbose(false)
                 .autoHeader(false)
                 .summary(true)
                 .aPrefix("a/")
@@ -123,7 +121,6 @@ public class Patcher {
     public void applyPatches(Project project) throws Exception {
         // Working directories
         File base = new File(project.getRootProject().getRootDir(), "upstream");
-        File tempBase = new File(project.getRootProject().getRootDir(), "tmp");
         File patches = new File(project.getRootProject().getRootDir(), "patches");
         File out = new File(project.getRootProject().getRootDir(), "dev");
         File rejects = new File(project.getRootProject().getRootDir(), "rejects");
@@ -135,22 +132,16 @@ public class Patcher {
             return;
         }
 
-        // Workaround. DiffUtils doesn't support binary files, and will crash if it tries to read any
-        // Here we copy only the text files to a temporary dir
-        tempBase.mkdirs();
-        OrionFileUtils.moveFiles(base, tempBase, true);
-
         // Set up the patch operation
         PatchOperation.Builder builder = PatchOperation.builder()
                 .logTo(new LoggingOutputStream(project.getLogger(), LogLevel.LIFECYCLE))
-                .basePath(tempBase.toPath())
+                .basePath(base.toPath())
                 .patchesPath(patches.toPath())
-                .outputPath(tempBase.toPath())
+                .outputPath(out.toPath())
                 .rejectsPath(rejects.toPath())
-                .verbose(false)
                 .summary(true)
                 .mode(PatchMode.OFFSET)
-                .level(Level.ALL)
+                .level(codechicken.diffpatch.util.LogLevel.ERROR)
                 .lineEnding(System.lineSeparator());
 
         builder.helpCallback(System.out::println);
@@ -164,12 +155,6 @@ public class Patcher {
         if (exit != 0) {
             throw new RuntimeException("Patches failed to apply.");
         }
-
-        // Operation is done, so we move the patched text files back into the upstream folder,
-        // so we once again have binaries
-        OrionFileUtils.moveFiles(tempBase, base, false);
-        FileUtils.copyDirectory(base, out);
-        FileUtils.deleteDirectory(tempBase);
 
         project.getLogger().lifecycle("Applied Patches successfully");
     }
