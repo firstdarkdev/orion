@@ -51,13 +51,7 @@ public class OrionExtension {
 
         if (project.hasProperty("release") && project.getProperties().get("release").toString().equalsIgnoreCase("true")) {
             versioning.uploadBuild(true);
-        } else {
-            if (!versioning.identifier.equalsIgnoreCase("snapshot") || !versioning.identifier.equalsIgnoreCase("port")) {
-                versioning.uploadBuild(false);
-                versioning.identifier("snapshot");
-            }
         }
-
 
         if (Environment.getenv("BUILD_NUMBER") != null)
             versioning.build(Integer.parseInt(Environment.getenv("BUILD_NUMBER")) - 1);
