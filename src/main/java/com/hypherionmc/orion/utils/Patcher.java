@@ -45,7 +45,7 @@ public class Patcher {
      * @param commitId Optional commit id, to check out a specific commit
      * @throws Exception Shit went wrong
      */
-    public void checkoutUpstreamBranch(Project project, String branch, @Nullable String commitId) throws Exception {
+    public void checkoutUpstreamBranch(Project project, String branch, @Nullable String commitId, boolean applyPatches) throws Exception {
         // Get the repository info
         Repository repository = new FileRepositoryBuilder().setGitDir(new File(project.getRootProject().getRootDir(), ".git")).build();
         ObjectId devBranchId = repository.resolve(commitId == null ? branch : commitId);
@@ -82,8 +82,10 @@ public class Patcher {
             FileUtils.write(Constants.patcherCommit, devBranchId.getName(), StandardCharsets.UTF_8);
         }
 
-        // Apply Patches
-        applyPatches(project);
+        if (applyPatches) {
+            // Apply Patches
+            applyPatches(project);
+        }
     }
 
     /**

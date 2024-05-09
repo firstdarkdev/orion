@@ -9,6 +9,7 @@ package com.hypherionmc.orion.plugin;
 import com.hypherionmc.orion.task.CleanWorkspace;
 import com.hypherionmc.orion.task.GeneratePatches;
 import com.hypherionmc.orion.task.SetupWorkspace;
+import com.hypherionmc.orion.task.UpdateCommitSha;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskProvider;
@@ -35,5 +36,8 @@ public class OrionPlugin implements Plugin<Project> {
 
         final TaskProvider<CleanWorkspace> cleanWorkspace = target.getRootProject().getTasks().register("cleanWorkspace", CleanWorkspace.class);
         cleanWorkspace.configure(c -> c.setGroup("orion"));
+
+        final TaskProvider<UpdateCommitSha> updateCommitRef = target.getRootProject().getTasks().register("updateCommitRef", UpdateCommitSha.class);
+        updateCommitRef.configure(c -> c.setGroup("orion"));
     }
 }

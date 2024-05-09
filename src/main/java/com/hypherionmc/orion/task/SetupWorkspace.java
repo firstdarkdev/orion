@@ -46,7 +46,7 @@ public class SetupWorkspace extends DefaultTask {
             lastCommitId = FileUtils.readFileToString(Constants.patcherCommit, StandardCharsets.UTF_8);
         }
 
-        Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), lastCommitId);
+        Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), lastCommitId, true);
     }
 
 }
