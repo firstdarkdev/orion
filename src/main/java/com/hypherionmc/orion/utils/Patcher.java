@@ -12,6 +12,7 @@ import codechicken.diffpatch.cli.PatchOperation;
 import codechicken.diffpatch.util.LoggingOutputStream;
 import codechicken.diffpatch.util.PatchMode;
 import com.hypherionmc.orion.Constants;
+import com.hypherionmc.orion.plugin.OrionPortingExtension;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
@@ -26,6 +27,9 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author HypherionSA
@@ -45,10 +49,11 @@ public class Patcher {
      * @param commitId Optional commit id, to check out a specific commit
      * @throws Exception Shit went wrong
      */
-    public void checkoutUpstreamBranch(Project project, String branch, @Nullable String commitId, boolean applyPatches) throws Exception {
+    public void checkoutUpstreamBranch(Project project, String branch, OrionPortingExtension extension, @Nullable String commitId, boolean applyPatches) throws Exception {
         // Get the repository info
         Repository repository = new FileRepositoryBuilder().setGitDir(new File(project.getRootProject().getRootDir(), ".git")).build();
         ObjectId devBranchId = repository.resolve(commitId == null ? branch : commitId);
+        System.out.println("ObjectID: " + devBranchId);
 
         project.getLogger().lifecycle("Pulling '{}' from into upstream directory", branch);
 
@@ -80,11 +85,14 @@ public class Patcher {
         // If this is a fresh pull, or update, write the commit hash for later retrieval
         if (commitId == null) {
             FileUtils.write(Constants.patcherCommit, devBranchId.getName(), StandardCharsets.UTF_8);
+            repository.close();
         }
 
         if (applyPatches) {
             // Apply Patches
-            applyPatches(project);
+            for (String b : extension.getPortingBranches()) {
+                applyPatches(project, b);
+            }
         }
     }
 
@@ -93,17 +101,23 @@ public class Patcher {
      * @param project The project the plugin is applied to
      * @throws Exception Shit went wrong
      */
-    public void generatePatches(Project project) throws Exception {
+    public void generatePatches(Project project, String workingDir) throws Exception {
         DiffOperation.Builder builder = DiffOperation.builder()
                 .logTo(new LoggingOutputStream(project.getLogger(), LogLevel.LIFECYCLE))
                 .aPath(Constants.patcherUpstream)
-                .bPath(Constants.patcherWorkdir)
-                .outputPath(new File(project.getRootProject().getRootDir(), "patches").toPath(), null)
+                .bPath(new File(project.getRootProject().getRootDir(), "dev/" + workingDir).toPath())
+                .outputPath(new File(project.getRootProject().getRootDir(), "patches/" + workingDir).toPath(), null)
                 .autoHeader(false)
                 .summary(true)
                 .aPrefix("a/")
                 .bPrefix("b/")
                 .lineEnding(System.lineSeparator());
+
+        String[] ignored = new String[] { ".idea", ".gradle", "build" };
+
+        for (String i : ignored) {
+            builder.ignorePrefix(i);
+        }
 
         CliOperation.Result<DiffOperation.DiffSummary> result = builder.build().operate();
 
@@ -112,6 +126,7 @@ public class Patcher {
             throw new RuntimeException("DiffPatch failed with exit code: " + exit);
         } else {
             project.getLogger().lifecycle("Generated Patches successfully");
+            cleanPatchesDir(new File("patches"));
         }
     }
 
@@ -120,19 +135,21 @@ public class Patcher {
      * @param project The project the plugin is applied to
      * @throws Exception Shit went wrong
      */
-    public void applyPatches(Project project) throws Exception {
+    public void applyPatches(Project project, String workingDir) throws Exception {
         // Working directories
         File base = new File(project.getRootProject().getRootDir(), "upstream");
-        File patches = new File(project.getRootProject().getRootDir(), "patches");
-        File out = new File(project.getRootProject().getRootDir(), "dev");
-        File rejects = new File(project.getRootProject().getRootDir(), "rejects");
+        File patches = new File(project.getRootProject().getRootDir(), "patches/" + workingDir);
+        File out = new File(project.getRootProject().getRootDir(), "dev/" + workingDir);
+        File rejects = new File(project.getRootProject().getRootDir(), "rejects/" + workingDir);
 
         // Check if any patches have been generated. If not, we copy the upstream folder to the dev folder
         if (!hasPatches(patches)) {
-            project.getLogger().lifecycle("Copying upstream branch into work directory");
-            FileUtils.copyDirectory(Constants.patcherUpstream.toFile(), Constants.patcherWorkdir.toFile());
+            project.getLogger().lifecycle("Copying upstream branch into {} directory", workingDir);
+            FileUtils.copyDirectory(Constants.patcherUpstream.toFile(), new File("dev", workingDir));
             return;
         }
+
+        project.getLogger().lifecycle("Patching {}", workingDir);
 
         // Set up the patch operation
         PatchOperation.Builder builder = PatchOperation.builder()
@@ -173,5 +190,26 @@ public class Patcher {
         }
 
         return false;
+    }
+
+    private void cleanPatchesDir(File dir) {
+        List<String> ignored = Arrays.asList(".idea", ".gradle", "build", "artifacts");
+
+        File[] files = dir.listFiles();
+        if (files == null)
+            return;
+
+        for (File f : files) {
+            if (f.isDirectory()) {
+                cleanPatchesDir(f);
+                continue;
+            }
+
+            if (ignored.contains(f.getName()))
+                FileUtils.deleteQuietly(f);
+        }
+
+        if (ignored.contains(dir.getName()))
+            FileUtils.deleteQuietly(dir);
     }
 }

@@ -33,12 +33,12 @@ public class SetupWorkspace extends DefaultTask {
             throw new GradleException("No upstream branch specified.");
         }
 
-        // Clean the working directories
-        if (Files.exists(Constants.patcherUpstream))
-            getProject().delete(Constants.patcherUpstream);
+        if (extension.getPortingBranches().isEmpty())
+            throw new GradleException("No porting branches specified");
 
-        if (Files.exists(Constants.patcherWorkdir))
-            getProject().delete(Constants.patcherWorkdir);
+        // Clean the working directories
+        getProject().delete(Constants.patcherUpstream);
+        getProject().delete(Constants.patcherWorkdir);
 
         // Check if current branch already has an upstream commit linked to it, and pull that instead
         String lastCommitId = null;
@@ -46,7 +46,7 @@ public class SetupWorkspace extends DefaultTask {
             lastCommitId = FileUtils.readFileToString(Constants.patcherCommit, StandardCharsets.UTF_8);
         }
 
-        Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), lastCommitId, true);
+        Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), extension, lastCommitId, true);
     }
 
 }

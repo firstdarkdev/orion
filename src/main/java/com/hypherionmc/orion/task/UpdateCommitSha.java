@@ -18,7 +18,11 @@ public class UpdateCommitSha extends DefaultTask {
             throw new GradleException("No upstream branch specified.");
         }
 
-        Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), null, false);
+        try {
+            Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), extension, null, false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

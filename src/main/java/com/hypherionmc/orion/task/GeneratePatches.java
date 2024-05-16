@@ -6,8 +6,10 @@
  */
 package com.hypherionmc.orion.task;
 
+import com.hypherionmc.orion.plugin.OrionPortingExtension;
 import com.hypherionmc.orion.utils.Patcher;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.GradleException;
 import org.gradle.api.tasks.TaskAction;
 
 /**
@@ -18,8 +20,15 @@ public class GeneratePatches extends DefaultTask {
 
     @TaskAction
     public void generatePatches() throws Exception {
+        OrionPortingExtension extension = getProject().getExtensions().findByType(OrionPortingExtension.class);
+
+        if (extension == null)
+            throw new GradleException("Cannot find orionporting extension on project");
+
         getLogger().lifecycle("Generating Patches");
-        Patcher.INSTANCE.generatePatches(getProject());
+        for (String b : extension.getPortingBranches()) {
+            Patcher.INSTANCE.generatePatches(getProject(), b);
+        }
     }
 
 }
