@@ -27,7 +27,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -53,7 +52,6 @@ public class Patcher {
         // Get the repository info
         Repository repository = new FileRepositoryBuilder().setGitDir(new File(project.getRootProject().getRootDir(), ".git")).build();
         ObjectId devBranchId = repository.resolve(commitId == null ? branch : commitId);
-        System.out.println("ObjectID: " + devBranchId);
 
         project.getLogger().lifecycle("Pulling '{}' from into upstream directory", branch);
 
@@ -145,7 +143,7 @@ public class Patcher {
         // Check if any patches have been generated. If not, we copy the upstream folder to the dev folder
         if (!hasPatches(patches)) {
             project.getLogger().lifecycle("Copying upstream branch into {} directory", workingDir);
-            FileUtils.copyDirectory(Constants.patcherUpstream.toFile(), new File("dev", workingDir));
+            FileUtils.copyDirectory(Constants.patcherUpstream.toFile(), out);
             return;
         }
 
