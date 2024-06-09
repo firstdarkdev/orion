@@ -157,7 +157,7 @@ public class Patcher {
                 .outputPath(out.toPath())
                 .rejectsPath(rejects.toPath())
                 .summary(true)
-                .mode(PatchMode.OFFSET)
+                .mode(PatchMode.FUZZY)
                 .level(codechicken.diffpatch.util.LogLevel.ERROR)
                 .lineEnding(System.lineSeparator());
 
