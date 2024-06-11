@@ -43,6 +43,7 @@ dependencies {
     shadeMe "com.squareup.okhttp3:okhttp:${okhttp}"
     shadeMe "com.google.code.gson:gson:${gson}"
     shadeMe "codechicken:DiffPatch:${diffpatch}:all"
+    shadeMe 'org.apache.commons:commons-compress:1.26.2'
     shadeMe "org.eclipse.jgit:org.eclipse.jgit:${jgit}"
     shadeMe "commons-io:commons-io:${commons_io}"
 
@@ -61,12 +62,21 @@ shadowJar {
 
 gradlePlugin {
     plugins {
-        modPublisherPlugin {
+        orionPlugin {
             id = 'com.hypherionmc.modutils.orion'
             description = project.description
             displayName = 'Orion'
             version = project.version
             implementationClass = "com.hypherionmc.orion.plugin.OrionPlugin"
+            tags.set(['gradle', 'utils', 'fdd'])
+        }
+
+        orionPortingPlugin {
+            id = 'com.hypherionmc.modutils.orion.porting'
+            description = project.description
+            displayName = 'OrionPorting'
+            version = project.version
+            implementationClass = "com.hypherionmc.orion.plugin.porting.OrionPortingPlugin"
             tags.set(['gradle', 'utils', 'fdd'])
         }
     }

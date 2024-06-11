@@ -22,6 +22,6 @@ public class Constants {
 
     // Porting Patcher
     public static final Path patcherUpstream = Paths.get("upstream");
-    public static final Path patcherWorkdir = Paths.get("dev");
+    public static final Path patcherWorkdir = Paths.get("workspace");
     public static final File patcherCommit = new File("commit.sha");
 }

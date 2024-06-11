@@ -12,7 +12,7 @@ import codechicken.diffpatch.cli.PatchOperation;
 import codechicken.diffpatch.util.LoggingOutputStream;
 import codechicken.diffpatch.util.PatchMode;
 import com.hypherionmc.orion.Constants;
-import com.hypherionmc.orion.plugin.OrionPortingExtension;
+import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
@@ -53,7 +53,7 @@ public class Patcher {
         Repository repository = new FileRepositoryBuilder().setGitDir(new File(project.getRootProject().getRootDir(), ".git")).build();
         ObjectId devBranchId = repository.resolve(commitId == null ? branch : commitId);
 
-        project.getLogger().lifecycle("Pulling '{}' from into upstream directory", branch);
+        project.getLogger().lifecycle("Pulling from '{}' into upstream directory", branch);
 
         // Checkout the branch into the upstream directory
         RevWalk revWalk = new RevWalk(repository);
@@ -89,7 +89,7 @@ public class Patcher {
         if (applyPatches) {
             // Apply Patches
             for (String b : extension.getPortingBranches()) {
-                applyPatches(project, b);
+                applyPatches(project, b, extension);
             }
         }
     }
@@ -103,7 +103,7 @@ public class Patcher {
         DiffOperation.Builder builder = DiffOperation.builder()
                 .logTo(new LoggingOutputStream(project.getLogger(), LogLevel.LIFECYCLE))
                 .aPath(Constants.patcherUpstream)
-                .bPath(new File(project.getRootProject().getRootDir(), "dev/" + workingDir).toPath())
+                .bPath(new File(project.getRootProject().getRootDir(), Constants.patcherWorkdir + File.separator + workingDir).toPath())
                 .outputPath(new File(project.getRootProject().getRootDir(), "patches/" + workingDir).toPath(), null)
                 .autoHeader(false)
                 .summary(true)
@@ -111,7 +111,7 @@ public class Patcher {
                 .bPrefix("b/")
                 .lineEnding(System.lineSeparator());
 
-        String[] ignored = new String[] { ".idea", ".gradle", "build" };
+        String[] ignored = new String[] { ".idea", ".gradle" };
 
         for (String i : ignored) {
             builder.ignorePrefix(i);
@@ -133,11 +133,11 @@ public class Patcher {
      * @param project The project the plugin is applied to
      * @throws Exception Shit went wrong
      */
-    public void applyPatches(Project project, String workingDir) throws Exception {
+    public void applyPatches(Project project, String workingDir, OrionPortingExtension extension) throws Exception {
         // Working directories
         File base = new File(project.getRootProject().getRootDir(), "upstream");
         File patches = new File(project.getRootProject().getRootDir(), "patches/" + workingDir);
-        File out = new File(project.getRootProject().getRootDir(), "dev/" + workingDir);
+        File out = new File(project.getRootProject().getRootDir(), Constants.patcherWorkdir + File.separator + workingDir);
         File rejects = new File(project.getRootProject().getRootDir(), "rejects/" + workingDir);
 
         // Check if any patches have been generated. If not, we copy the upstream folder to the dev folder
@@ -157,7 +157,7 @@ public class Patcher {
                 .outputPath(out.toPath())
                 .rejectsPath(rejects.toPath())
                 .summary(true)
-                .mode(PatchMode.FUZZY)
+                .mode(extension.getPatchMode().get())
                 .level(codechicken.diffpatch.util.LogLevel.ERROR)
                 .lineEnding(System.lineSeparator());
 
@@ -170,7 +170,7 @@ public class Patcher {
             throw new RuntimeException("DiffPatch failed with exit code: " + exit);
         }
         if (exit != 0) {
-            throw new RuntimeException("Patches failed to apply.");
+            project.getLogger().error("Patched failed to apply for {}", workingDir);
         }
 
         project.getLogger().lifecycle("Applied Patches successfully");

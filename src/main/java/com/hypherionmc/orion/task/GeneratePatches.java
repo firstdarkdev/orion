@@ -6,7 +6,7 @@
  */
 package com.hypherionmc.orion.task;
 
-import com.hypherionmc.orion.plugin.OrionPortingExtension;
+import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
 import com.hypherionmc.orion.utils.Patcher;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;

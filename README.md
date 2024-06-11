@@ -10,7 +10,7 @@ A Gradle utilities plugin for First Dark Development.
 * Automatic copying and cleanup configurations for FDD-XPLAT projects
 * Automatic maven repositories installations
 * Expose Doppler variables as environment variables.
-
+* Utilities for backporting development branches to older versions
 
 ## Note
 
