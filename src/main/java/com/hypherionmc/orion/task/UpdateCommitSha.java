@@ -1,3 +1,9 @@
+/*
+ * This file is part of orion, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) 2024 HypherionSA and Contributors
+ *
+ */
 package com.hypherionmc.orion.task;
 
 import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
@@ -21,7 +27,7 @@ public class UpdateCommitSha extends DefaultTask {
         try {
             Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), extension, null, false);
         } catch (Exception e) {
-            e.printStackTrace();
+            getLogger().error("Failed to update commit ref", e);
         }
     }
 

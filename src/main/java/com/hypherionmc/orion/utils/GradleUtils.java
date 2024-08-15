@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  * @author Hypherionsa
@@ -106,22 +108,20 @@ public class GradleUtils {
                 if (files == null)
                     return;
 
-                for (File f : files) {
-                    if (f.isDirectory())
-                        continue;
-
+                for (File f : Arrays.stream(files).filter(f -> !f.isDirectory()).collect(Collectors.toList())) {
                     if (f.getName().contains("-dev-shadow") || f.getName().contains("-dev") || f.getName().contains("-all") || f.getName().contains("-slim")) {
                         f.delete();
-                    } else {
-                        if (!artifactDir.exists())
-                            artifactDir.mkdirs();
+                        continue;
+                    }
 
-                        try {
-                            Files.move(f.toPath(), new File(artifactDir, f.getName()).toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        } catch (IOException e) {
-                            project.getLogger().error("Failed to copy artifact to output directory", e);
-                            throw new GradleException(e.getMessage());
-                        }
+                    if (!artifactDir.exists())
+                        artifactDir.mkdirs();
+
+                    try {
+                        Files.move(f.toPath(), new File(artifactDir, f.getName()).toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        project.getLogger().error("Failed to copy artifact to output directory", e);
+                        throw new GradleException(e.getMessage());
                     }
                 }
             });

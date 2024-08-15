@@ -88,7 +88,7 @@ public class Patcher {
 
         if (applyPatches) {
             // Apply Patches
-            for (String b : extension.getPortingBranches()) {
+            for (String b : extension.getPortingBranches().get()) {
                 applyPatches(project, b, extension);
             }
         }

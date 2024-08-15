@@ -16,6 +16,9 @@ import java.nio.file.Paths;
  */
 public class Constants {
 
+    // Strings
+    public static final String TASK_GROUP = "orion";
+
     public static final String MAVEN_URL = "https://maven.firstdark.dev/releases";
     public static final String MAVEN_SNAPSHOT_URL = "https://maven.firstdark.dev/snapshots";
     public static final String MAVEN_CENTRAL_URL = "https://mcentral.firstdark.dev/releases";

@@ -1,3 +1,9 @@
+/*
+ * This file is part of orion, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) 2024 HypherionSA and Contributors
+ *
+ */
 package com.hypherionmc.orion.task;
 
 import com.hypherionmc.orion.Constants;
@@ -22,7 +28,7 @@ public class SplitSources extends DefaultTask {
         if (!Files.exists(Constants.patcherWorkdir))
             throw new GradleException("Working Directory does NOT exist");
 
-        for (String b : extension.getPortingBranches()) {
+        for (String b : extension.getPortingBranches().get()) {
             File f = new File(getProject().getRootProject().getRootDir(), b);
             if (f.exists())
                 FileUtils.deleteQuietly(f);

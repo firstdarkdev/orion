@@ -33,7 +33,7 @@ public class SetupWorkspace extends DefaultTask {
             throw new GradleException("No upstream branch specified.");
         }
 
-        if (extension.getPortingBranches().isEmpty())
+        if (extension.getPortingBranches().get().isEmpty())
             throw new GradleException("No porting branches specified");
 
         // Clean the working directories

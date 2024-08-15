@@ -26,7 +26,7 @@ public class GeneratePatches extends DefaultTask {
             throw new GradleException("Cannot find orionporting extension on project");
 
         getLogger().lifecycle("Generating Patches");
-        for (String b : extension.getPortingBranches()) {
+        for (String b : extension.getPortingBranches().get()) {
             Patcher.INSTANCE.generatePatches(getProject(), b);
         }
     }
