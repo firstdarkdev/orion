@@ -73,6 +73,20 @@ public class GradleUtils {
                     m.setUrl(Constants.MAVEN_CENTRAL_URL);
                 });
             }
+
+            if (extension.getTools().isEnableAutoService()) {
+                p.getDependencies().add("compileOnly", Constants.AUTO_SERVICE);
+                p.getDependencies().add("annotationProcessor", Constants.AUTO_SERVICE);
+            }
+
+            if (extension.getTools().isEnableLombok()) {
+                p.getDependencies().add("compileOnly", Constants.LOMBOK);
+                p.getDependencies().add("annotationProcessor", Constants.LOMBOK);
+            }
+
+            if (extension.getTools().isEnableNoLoader()) {
+                p.getDependencies().add("compileOnly", Constants.NO_LOADER);
+            }
         });
     }
 

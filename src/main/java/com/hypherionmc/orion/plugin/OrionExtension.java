@@ -10,6 +10,7 @@ import com.hypherionmc.orion.Constants;
 import com.hypherionmc.orion.utils.Environment;
 import com.hypherionmc.orion.utils.GradleUtils;
 import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
 import lombok.Getter;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
@@ -27,6 +28,7 @@ public class OrionExtension {
 
     // Properties
     private final Versioning versioning = new Versioning();
+    private final Tools tools = new Tools();
     private final Property<Boolean> enableReleasesMaven;
     private final Property<Boolean> enableSnapshotsMaven;
     private final Property<Boolean> enableMirrorMaven;
@@ -75,10 +77,14 @@ public class OrionExtension {
         action.execute(versioning);
     }
 
+    public void tools(Action<Tools> action) {
+        action.execute(tools);
+    }
+
     /**
      * Helper method to force the plugin to configure and apply everything early
      */
-    public void setup(Closure<?> closure) {
+    public void setup(@DelegatesTo(value = OrionExtension.class, strategy = Closure.DELEGATE_FIRST) Closure<OrionExtension> closure) {
         ConfigureUtil.configure(closure, this);
         postConfiguration();
     }
@@ -180,6 +186,25 @@ public class OrionExtension {
             }
 
             return String.format(v, major, minor, patch);
+        }
+    }
+
+    @Getter
+    public static class Tools {
+        private boolean enableLombok = false;
+        private boolean enableAutoService = false;
+        private boolean enableNoLoader = false;
+
+        public void lombok() {
+            this.enableLombok = true;
+        }
+
+        public void autoService() {
+            this.enableAutoService = true;
+        }
+
+        public void noLoader() {
+            this.enableNoLoader = true;
         }
     }
 }
