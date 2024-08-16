@@ -18,6 +18,7 @@ public class Constants {
 
     // Strings
     public static final String TASK_GROUP = "orion";
+    public static final String PATCH_GROUP = "patches";
 
     // Tool Deps
     public static final String AUTO_SERVICE = "com.google.auto.service:auto-service:1.1.1";

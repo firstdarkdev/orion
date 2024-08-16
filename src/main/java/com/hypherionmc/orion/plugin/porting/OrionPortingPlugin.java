@@ -7,7 +7,12 @@
 package com.hypherionmc.orion.plugin.porting;
 
 import com.hypherionmc.orion.Constants;
-import com.hypherionmc.orion.task.*;
+import com.hypherionmc.orion.task.patches.GeneratePatches;
+import com.hypherionmc.orion.task.patches.RebuildPatches;
+import com.hypherionmc.orion.task.workspace.CleanWorkspace;
+import com.hypherionmc.orion.task.workspace.SetupWorkspace;
+import com.hypherionmc.orion.task.workspace.SplitSources;
+import com.hypherionmc.orion.task.workspace.UpdateCommitSha;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
@@ -24,10 +29,12 @@ public class OrionPortingPlugin implements Plugin<Project> {
 
         // Configure tasks
         target.getRootProject().getTasks().register("setupWorkspace", SetupWorkspace.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
-        target.getRootProject().getTasks().register("generatePatches", GeneratePatches.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
         target.getRootProject().getTasks().register("cleanWorkspace", CleanWorkspace.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
         target.getRootProject().getTasks().register("updateCommitRef", UpdateCommitSha.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
         target.getRootProject().getTasks().register("splitSources", SplitSources.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
-        target.getRootProject().getTasks().register("rebuildPatches", RebuildPatches.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
+
+        // Patching Tasks
+        target.getRootProject().getTasks().register("generatePatches", GeneratePatches.class).configure(c -> c.setGroup(Constants.PATCH_GROUP));
+        target.getRootProject().getTasks().register("rebuildPatches", RebuildPatches.class).configure(c -> c.setGroup(Constants.PATCH_GROUP));
     }
 }

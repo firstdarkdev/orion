@@ -4,22 +4,27 @@
  * Copyright (c) 2024 HypherionSA and Contributors
  *
  */
-package com.hypherionmc.orion.task;
+package com.hypherionmc.orion.task.workspace;
 
 import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
+import com.hypherionmc.orion.task.TaskActions;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.tasks.TaskAction;
 
-public class UpdateCommitSha extends DefaultTask {
+/**
+ * @author HypherionSA
+ * Task to prepare a porting workspace. Includes pulling the upstream branch, and applying patches if any
+ */
+public class SetupWorkspace extends DefaultTask {
 
     @TaskAction
-    public void updateCommitSha() throws Exception {
+    public void setupWorkspace() throws Exception {
         OrionPortingExtension extension = getProject().getExtensions().findByType(OrionPortingExtension.class);
         if (extension == null)
             throw new GradleException("orionporting extension is not configured");
 
-        TaskActions.INSTANCE.updateCommitSha(getProject(), getLogger(), extension);
+        TaskActions.INSTANCE.setupWorkspace(getProject(), getLogger(), extension);
     }
 
 }

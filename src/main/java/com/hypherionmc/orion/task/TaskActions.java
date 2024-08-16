@@ -1,3 +1,9 @@
+/*
+ * This file is part of orion, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) 2024 HypherionSA and Contributors
+ *
+ */
 package com.hypherionmc.orion.task;
 
 import com.hypherionmc.orion.Constants;

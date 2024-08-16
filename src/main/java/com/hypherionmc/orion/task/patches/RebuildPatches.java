@@ -1,7 +1,14 @@
-package com.hypherionmc.orion.task;
+/*
+ * This file is part of orion, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) 2024 HypherionSA and Contributors
+ *
+ */
+package com.hypherionmc.orion.task.patches;
 
 import com.hypherionmc.orion.Constants;
 import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
+import com.hypherionmc.orion.task.TaskActions;
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;

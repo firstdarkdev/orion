@@ -4,9 +4,10 @@
  * Copyright (c) 2024 HypherionSA and Contributors
  *
  */
-package com.hypherionmc.orion.task;
+package com.hypherionmc.orion.task.patches;
 
 import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
+import com.hypherionmc.orion.task.TaskActions;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.tasks.TaskAction;

@@ -4,24 +4,23 @@
  * Copyright (c) 2024 HypherionSA and Contributors
  *
  */
-package com.hypherionmc.orion.task;
+package com.hypherionmc.orion.task.workspace;
 
 import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
+import com.hypherionmc.orion.task.TaskActions;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.tasks.TaskAction;
 
-import java.io.IOException;
-
-public class SplitSources extends DefaultTask {
+public class UpdateCommitSha extends DefaultTask {
 
     @TaskAction
-    public void splitSources() throws IOException {
+    public void updateCommitSha() throws Exception {
         OrionPortingExtension extension = getProject().getExtensions().findByType(OrionPortingExtension.class);
         if (extension == null)
             throw new GradleException("orionporting extension is not configured");
 
-        TaskActions.INSTANCE.splitSources(getProject(), getLogger(), extension);
+        TaskActions.INSTANCE.updateCommitSha(getProject(), getLogger(), extension);
     }
 
 }
