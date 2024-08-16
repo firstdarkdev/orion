@@ -6,11 +6,8 @@
  */
 package com.hypherionmc.orion.task;
 
-import com.hypherionmc.orion.Constants;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
-
-import java.io.File;
 
 /**
  * @author HypherionSA
@@ -20,8 +17,7 @@ public class CleanWorkspace extends DefaultTask {
 
     @TaskAction
     public void cleanupWorkspace() {
-        getProject().delete(Constants.patcherWorkdir, Constants.patcherUpstream, new File(getProject().getRootProject().getRootDir(), "tmp").toPath());
-        getLogger().lifecycle("Cleaned up working directories");
+        TaskActions.INSTANCE.cleanWorkspace(getLogger(), getProject());
     }
 
 }

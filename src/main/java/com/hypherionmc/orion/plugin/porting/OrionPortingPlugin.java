@@ -28,5 +28,6 @@ public class OrionPortingPlugin implements Plugin<Project> {
         target.getRootProject().getTasks().register("cleanWorkspace", CleanWorkspace.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
         target.getRootProject().getTasks().register("updateCommitRef", UpdateCommitSha.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
         target.getRootProject().getTasks().register("splitSources", SplitSources.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
+        target.getRootProject().getTasks().register("rebuildPatches", RebuildPatches.class).configure(c -> c.setGroup(Constants.TASK_GROUP));
     }
 }

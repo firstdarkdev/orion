@@ -6,16 +6,10 @@
  */
 package com.hypherionmc.orion.task;
 
-import com.hypherionmc.orion.Constants;
 import com.hypherionmc.orion.plugin.porting.OrionPortingExtension;
-import com.hypherionmc.orion.utils.Patcher;
-import org.apache.commons.io.FileUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.tasks.TaskAction;
-
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 /**
  * @author HypherionSA
@@ -29,24 +23,7 @@ public class SetupWorkspace extends DefaultTask {
         if (extension == null)
             throw new GradleException("orionporting extension is not configured");
 
-        if (!extension.getUpstreamBranch().isPresent() || extension.getUpstreamBranch().get().equalsIgnoreCase("INVALID")) {
-            throw new GradleException("No upstream branch specified.");
-        }
-
-        if (extension.getPortingBranches().get().isEmpty())
-            throw new GradleException("No porting branches specified");
-
-        // Clean the working directories
-        getProject().delete(Constants.patcherUpstream);
-        getProject().delete(Constants.patcherWorkdir);
-
-        // Check if current branch already has an upstream commit linked to it, and pull that instead
-        String lastCommitId = null;
-        if (Constants.patcherCommit.exists()) {
-            lastCommitId = FileUtils.readFileToString(Constants.patcherCommit, StandardCharsets.UTF_8);
-        }
-
-        Patcher.INSTANCE.checkoutUpstreamBranch(getProject(), extension.getUpstreamBranch().get(), extension, lastCommitId, true);
+        TaskActions.INSTANCE.setupWorkspace(getProject(), getLogger(), extension);
     }
 
 }
