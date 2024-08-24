@@ -74,13 +74,15 @@ public class GradleUtils {
                 });
             }
 
-            applyTools(extension, p);
+            p.afterEvaluate(pp -> applyTools(extension, p));
         });
     }
 
     private void applyTools(OrionExtension extension, Project p) {
-        if (extension.getMultiProject().get() && !p.getName().equalsIgnoreCase(p.getRootProject().getName()))
+        if (extension.getMultiProject().get() && p.getName().equalsIgnoreCase(p.getRootProject().getName())) {
+            System.out.println(p.getName() + " is ROOT. Skipping");
             return;
+        }
 
         if (extension.getTools().isEnableAutoService()) {
             p.getDependencies().add("compileOnly", Constants.AUTO_SERVICE);
