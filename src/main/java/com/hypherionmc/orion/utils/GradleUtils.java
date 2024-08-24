@@ -74,20 +74,27 @@ public class GradleUtils {
                 });
             }
 
-            if (extension.getTools().isEnableAutoService()) {
-                p.getDependencies().add("compileOnly", Constants.AUTO_SERVICE);
-                p.getDependencies().add("annotationProcessor", Constants.AUTO_SERVICE);
-            }
-
-            if (extension.getTools().isEnableLombok()) {
-                p.getDependencies().add("compileOnly", Constants.LOMBOK);
-                p.getDependencies().add("annotationProcessor", Constants.LOMBOK);
-            }
-
-            if (extension.getTools().isEnableNoLoader()) {
-                p.getDependencies().add("compileOnly", Constants.NO_LOADER);
-            }
+            applyTools(extension, p);
         });
+    }
+
+    private void applyTools(OrionExtension extension, Project p) {
+        if (extension.getMultiProject().get() && !p.getName().equalsIgnoreCase(p.getRootProject().getName()))
+            return;
+
+        if (extension.getTools().isEnableAutoService()) {
+            p.getDependencies().add("compileOnly", Constants.AUTO_SERVICE);
+            p.getDependencies().add("annotationProcessor", Constants.AUTO_SERVICE);
+        }
+
+        if (extension.getTools().isEnableLombok()) {
+            p.getDependencies().add("compileOnly", Constants.LOMBOK);
+            p.getDependencies().add("annotationProcessor", Constants.LOMBOK);
+        }
+
+        if (extension.getTools().isEnableNoLoader()) {
+            p.getDependencies().add("compileOnly", Constants.NO_LOADER);
+        }
     }
 
     /**
