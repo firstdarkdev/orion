@@ -80,7 +80,6 @@ public class GradleUtils {
 
     private void applyTools(OrionExtension extension, Project p) {
         if (extension.getMultiProject().get() && p.getName().equalsIgnoreCase(p.getRootProject().getName())) {
-            System.out.println(p.getName() + " is ROOT. Skipping");
             return;
         }
 

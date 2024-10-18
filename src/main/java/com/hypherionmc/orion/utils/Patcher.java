@@ -26,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -66,12 +67,17 @@ public class Patcher {
             while (treeWalk.next()) {
                 String filePath = treeWalk.getPathString();
                 ObjectId objectId = treeWalk.getObjectId(0);
-                byte[] fileData = repository.open(objectId).getBytes();
 
-                File targetFile = new File(repository.getWorkTree(), Constants.patcherUpstream + File.separator + filePath);
-                targetFile.getParentFile().mkdirs();
-                try (FileOutputStream fos = new FileOutputStream(targetFile)) {
-                    fos.write(fileData);
+                try {
+                    byte[] fileData = repository.open(objectId).getBytes();
+
+                    File targetFile = new File(repository.getWorkTree(), Constants.patcherUpstream + File.separator + filePath);
+                    targetFile.getParentFile().mkdirs();
+                    try (FileOutputStream fos = new FileOutputStream(targetFile)) {
+                        fos.write(fileData);
+                    }
+                } catch (IOException e) {
+                    project.getLogger().warn("Failed to fully parse commit {}", objectId, e);
                 }
             }
         }
