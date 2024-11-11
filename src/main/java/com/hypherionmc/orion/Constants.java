@@ -23,7 +23,7 @@ public class Constants {
     // Tool Deps
     public static final String AUTO_SERVICE = "com.google.auto.service:auto-service:1.1.1";
     public static final String LOMBOK = "org.projectlombok:lombok:1.18.34";
-    public static final String NO_LOADER = "com.hypherionmc.noloaderthanks:noloaderthanks:1.0.1";
+    public static final String NO_LOADER = "com.hypherionmc.noloaderthanks:noloaderthanks:1.0.6";
 
     // FDD Mavens
     public static final String MAVEN_URL = "https://maven.firstdark.dev/releases";

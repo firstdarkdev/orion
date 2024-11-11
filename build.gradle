@@ -79,6 +79,15 @@ gradlePlugin {
             implementationClass = "com.hypherionmc.orion.plugin.porting.OrionPortingPlugin"
             tags.set(['gradle', 'utils', 'fdd'])
         }
+
+        origamiPlugin {
+            id = 'com.hypherionmc.modutils.orion.origami'
+            description = project.description
+            displayName = 'OrionOrigami'
+            version = project.version
+            implementationClass = "com.hypherionmc.orion.plugin.paper.OrigamiPlugin"
+            tags.set(['gradle', 'utils', 'fdd'])
+        }
     }
 }
 
