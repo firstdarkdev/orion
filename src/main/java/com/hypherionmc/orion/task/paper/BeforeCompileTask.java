@@ -88,7 +88,7 @@ public class BeforeCompileTask extends DefaultTask {
         try {
             String content = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
 
-            if (content.contains("// @noplugin")) {
+            if (content.contains("// @excludeplugin")) {
                 FileUtils.delete(file);
                 return;
             }
