@@ -10,7 +10,7 @@ import com.hypherionmc.orion.task.TaskActions
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-class CleanWorkspace: DefaultTask() {
+open class CleanWorkspace: DefaultTask() {
 
     @TaskAction
     fun cleanupWorkspace() {

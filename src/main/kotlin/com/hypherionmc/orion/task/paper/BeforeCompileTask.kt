@@ -22,7 +22,7 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
 
-class BeforeCompileTask: DefaultTask() {
+open class BeforeCompileTask: DefaultTask() {
 
     @TaskAction
     @Throws(IOException::class)
@@ -40,18 +40,23 @@ class BeforeCompileTask: DefaultTask() {
             return
         }
 
+        project.logger.lifecycle("⚡ Start Processing Plugin Shared Sources")
+
         val destFolder = File(project.layout.buildDirectory.asFile.get(), "commonShared")
         if (destFolder.exists())
             FileUtils.deleteDirectory(destFolder)
 
         FileUtils.copyDirectory(sourcesFolder, destFolder)
 
+        project.logger.lifecycle("⚡ Removing Excluded Packages")
         for (excludedPackage in extension.excludedPackages.get()) {
             val pkg = File(destFolder, "java/${excludedPackage.replace('.', '/')}")
             if (pkg.exists())
                 FileUtils.deleteDirectory(pkg)
         }
+        logger.lifecycle("\uD83E\uDDF9 Successfully processed Excluded Packages")
 
+        project.logger.lifecycle("⚡ Removing Excluded Resources")
         for (excludedResource in extension.excludedResources.get()) {
             val res = File(destFolder, "resources/${excludedResource}")
             if (res.exists()) {
@@ -62,6 +67,7 @@ class BeforeCompileTask: DefaultTask() {
                 }
             }
         }
+        logger.lifecycle("\uD83E\uDDF9 Successfully processed Excluded Resources")
 
         processComments(destFolder)
 
@@ -69,6 +75,7 @@ class BeforeCompileTask: DefaultTask() {
     }
 
     private fun processComments(sourceDir: File) {
+        project.logger.lifecycle("⚡ Running Comment Processor")
         try {
             Files.walkFileTree(sourceDir.toPath(), object : SimpleFileVisitor<Path>() {
                 @Throws(IOException::class)
@@ -82,6 +89,7 @@ class BeforeCompileTask: DefaultTask() {
         } catch (e: IOException) {
             throw GradleException(e.message ?: "Error while reading file", e)
         }
+        logger.lifecycle("\uD83E\uDDF9 Successfully processed Comments")
     }
 
     private fun stripSpecialCode(file: File) {

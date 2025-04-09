@@ -44,7 +44,7 @@ object Patcher {
         val repository = FileRepositoryBuilder().setGitDir(File(project.rootProject.rootDir, ".git")).build()
         val devBranchId = repository.resolve(commitId ?: branch)
 
-        project.logger.lifecycle("⚡ Pulling from '$devBranchId' into upstream directory")
+        project.logger.lifecycle("⚡ Pulling from '$branch' into upstream directory")
 
         // Checkout the branch into the upstream directory
         val refWalk = RevWalk(repository)
@@ -60,7 +60,7 @@ object Patcher {
 
                 try {
                     val fileData = repository.open(objectId).bytes
-                    val targetFile = File(repository.workTree, Constants.patcherUpstream.absolutePathString() + File.separator + filePath)
+                    val targetFile = File(repository.workTree, Constants.patcherUpstream.toString() + File.separator + filePath)
                     targetFile.parentFile.mkdirs()
 
                     FileOutputStream(targetFile).use { fos -> fos.write(fileData) }
@@ -98,7 +98,7 @@ object Patcher {
         val builder = DiffOperation.builder()
             .logTo(LoggingOutputStream(project.logger, LogLevel.LIFECYCLE))
             .aPath(Constants.patcherUpstream)
-            .bPath(File(project.rootProject.rootDir, Constants.patcherWorkdir.absolutePathString() + File.separator + workingDir).toPath())
+            .bPath(File(project.rootProject.rootDir, Constants.patcherWorkdir.toString() + File.separator + workingDir).toPath())
             .outputPath(File(project.rootProject.rootDir, "patches/${workingDir}").toPath())
             .autoHeader(false)
             .summary(true)

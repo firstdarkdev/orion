@@ -12,7 +12,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 
-class GeneratePatches: DefaultTask() {
+open class GeneratePatches: DefaultTask() {
 
     @TaskAction
     @Throws(Exception::class)

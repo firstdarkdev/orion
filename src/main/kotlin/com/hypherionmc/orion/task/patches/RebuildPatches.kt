@@ -15,7 +15,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
-class RebuildPatches: DefaultTask() {
+open class RebuildPatches: DefaultTask() {
 
     @TaskAction
     @Throws(Exception::class)

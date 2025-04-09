@@ -12,7 +12,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 
-class UpdateCommitSha: DefaultTask() {
+open class UpdateCommitSha: DefaultTask() {
 
     @TaskAction
     fun updateCommitSha() {
