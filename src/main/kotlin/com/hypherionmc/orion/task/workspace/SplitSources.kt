@@ -12,6 +12,12 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 
+/**
+ * @author HypherionSA
+ *
+ * Task to split porting code, into usable projects for compiling, without needing to set up a full
+ * porting environment
+ */
 open class SplitSources: DefaultTask() {
 
     @TaskAction

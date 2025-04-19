@@ -43,6 +43,14 @@ repositories {
     maven("https://maven.covers1624.net")
 }
 
+sourceSets {
+    create("annotations") {
+        java.srcDir("src/main/java/com/hypherionmc/orion/processors/annotations")
+        compileClasspath += sourceSets["main"].compileClasspath
+        runtimeClasspath += sourceSets["main"].runtimeClasspath
+    }
+}
+
 dependencies {
     implementation(gradleApi())
 
@@ -52,6 +60,7 @@ dependencies {
     shadeMe("org.apache.commons:commons-compress:1.26.2")
     shadeMe("org.eclipse.jgit:org.eclipse.jgit:${jgit}")
     shadeMe("commons-io:commons-io:${commons_io}")
+    shadeMe("com.github.javaparser:javaparser-core:3.24.0")
 
     // Lombok
     compileOnly("org.projectlombok:lombok:${lombok}")
@@ -64,6 +73,18 @@ tasks.named<ShadowJar>("shadowJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     configurations = listOf(shadeMe)
     archiveClassifier.set("")
+    mergeServiceFiles()
+}
+
+tasks.withType<Jar>().configureEach {
+    manifest {
+        attributes["Implementation-Version"] = project.version.toString()
+    }
+}
+
+tasks.register<Jar>("annotationsJar") {
+    archiveClassifier.set("annotations")
+    from(sourceSets["annotations"].output)
 }
 
 gradlePlugin {
@@ -105,6 +126,17 @@ spotless {
 }
 
 publishing {
+    publications {
+        create<MavenPublication>("annotationsJar") {
+            artifactId = "orion-tools"
+            version = project.version.toString()
+
+            artifact(tasks["annotationsJar"]) {
+                classifier = "annotations"
+            }
+        }
+    }
+
     repositories {
         maven {
             url = uri(System.getenv("MAVEN_URL"))

@@ -12,6 +12,11 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 
+/**
+ * @author HypherionSA
+ *
+ * Helper task to set up a porting environment workspace
+ */
 open class SetupWorkspace: DefaultTask() {
 
     @TaskAction

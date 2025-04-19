@@ -18,7 +18,9 @@ import org.gradle.api.Project
 
 /**
  * @author HypherionSA
- * Main porting plugin entrypoint
+ *
+ * Gradle plugin to handle patching and generating code that helps minimize effort when having to backport
+ * features or bug fixes to older Minecraft Versions
  */
 class OrionPortingPlugin: Plugin<Project> {
 

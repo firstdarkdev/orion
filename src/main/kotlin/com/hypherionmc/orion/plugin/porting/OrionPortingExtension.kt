@@ -13,6 +13,11 @@ import org.gradle.api.provider.Property
 import java.util.*
 import java.util.stream.Collectors
 
+/**
+ * @author HypherionSA
+ *
+ * Gradle extension to handle setting up a porting environment for Minecraft Mods
+ */
 open class OrionPortingExtension(project: Project) {
 
     val upstreamBranch: Property<String> = project.objects.property(String::class.java).convention("INVALID")

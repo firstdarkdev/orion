@@ -22,19 +22,28 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
 
+/**
+ * @author HypherionSA
+ *
+ * Gradle task to strip out code and resources, for Paper Plugins compiled against modded code
+ * This runs before the resources and source code are processed
+ */
 open class BeforeCompileTask: DefaultTask() {
 
     @TaskAction
     @Throws(IOException::class)
     fun prepareSourcesTask() {
+        // Check that the extension is registered
         val extension = project.extensions.getByType(OrigamiExtension::class.java)
             ?: throw GradleException("Cannot find origami extension on project")
 
+        // Check that the COMMON (or shared project) is configured, and accessible
         val common = project.rootProject.findProject(extension.commonProject.get())
             ?: throw GradleException("Cannot find common project ${extension.commonProject.get()}")
 
         val sourcesFolder = File(common.projectDir, "src/main")
 
+        // Check that the shared source code folder exists
         if (!sourcesFolder.exists()) {
             project.logger.warn("Cannot find sources folder in ${extension.commonProject.get()}")
             return
@@ -42,12 +51,14 @@ open class BeforeCompileTask: DefaultTask() {
 
         project.logger.lifecycle("⚡ Start Processing Plugin Shared Sources")
 
+        // Set up the temporary processing folder
         val destFolder = File(project.layout.buildDirectory.asFile.get(), "commonShared")
         if (destFolder.exists())
             FileUtils.deleteDirectory(destFolder)
 
         FileUtils.copyDirectory(sourcesFolder, destFolder)
 
+        // Filter out excluded code packages
         project.logger.lifecycle("⚡ Removing Excluded Packages")
         for (excludedPackage in extension.excludedPackages.get()) {
             val pkg = File(destFolder, "java/${excludedPackage.replace('.', '/')}")
@@ -56,6 +67,7 @@ open class BeforeCompileTask: DefaultTask() {
         }
         logger.lifecycle("\uD83E\uDDF9 Successfully processed Excluded Packages")
 
+        // Filter out excluded resources
         project.logger.lifecycle("⚡ Removing Excluded Resources")
         for (excludedResource in extension.excludedResources.get()) {
             val res = File(destFolder, "resources/${excludedResource}")
@@ -71,9 +83,15 @@ open class BeforeCompileTask: DefaultTask() {
 
         processComments(destFolder)
 
+        // Give the processed sources and resources back to the compile task
         project.tasks.withType(JavaCompile::class.java).forEach { t -> t.source(File(destFolder, "java")) }
     }
 
+    /**
+     * Process code comments that handle excluding certain pieces of code, or even entire classes
+     *
+     * @param sourceDir The Directory that is being processed
+     */
     private fun processComments(sourceDir: File) {
         project.logger.lifecycle("⚡ Running Comment Processor")
         try {
@@ -92,15 +110,22 @@ open class BeforeCompileTask: DefaultTask() {
         logger.lifecycle("\uD83E\uDDF9 Successfully processed Comments")
     }
 
+    /**
+     * Strip code and comments from Source Code
+     *
+     * @param file The File that is being processed
+     */
     private fun stripSpecialCode(file: File) {
         try {
             val content = FileUtils.readFileToString(file, StandardCharsets.UTF_8)
 
+            // File is marked to be excluded from Plugin Sources, so we delete it
             if (content.contains("// @excludeplugin")) {
                 FileUtils.delete(file)
                 return
             }
 
+            // Code block that must be removed when compiling for paper
             val regex = "(?m)(?s)^\\s*// @noplugin.*?// #noplugin\\s*$"
 
             val pattern = Pattern.compile(regex)

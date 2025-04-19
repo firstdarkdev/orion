@@ -17,13 +17,31 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
+/**
+ * @author HypherionSA
+ *
+ * Helper/Utility class to reduce duplicate code that are shared between tasks
+ */
 object TaskActions {
 
+    /**
+     * Clean up porting workspace directories
+     *
+     * @param logger The Gradle Logger that is currently used
+     * @param project The Gradle Project that is currently being processed
+     */
     fun cleanWorkspace(logger: Logger, project: Project) {
         project.delete(Constants.patcherWorkdir, Constants.patcherUpstream, File(project.rootProject.rootDir, "tmp"))
         logger.lifecycle("\uD83E\uDDF9 Cleaned up working directories")
     }
 
+    /**
+     * Generate patches for porting code between versions
+     *
+     * @param project The Gradle Project that is currently being processed
+     * @param logger The Gradle Logger that is currently used
+     * @param extension The OrionPortingExtension that was configured for use in this task
+     */
     @Throws(Exception::class)
     fun generatePatches(project: Project, logger: Logger, extension: OrionPortingExtension) {
         logger.lifecycle("⚡ Generating patches")
@@ -33,6 +51,12 @@ object TaskActions {
         }
     }
 
+    /**
+     * Set up a porting workspace
+     *
+     * @param project The Gradle Project that is currently being processed
+     * @param extension The OrionPortingExtension that was configured for use in this task
+     */
     @Throws(Exception::class)
     fun setupWorkspace(project: Project, extension: OrionPortingExtension) {
         if (!extension.upstreamBranch.isPresent || extension.upstreamBranch.get().equals("INVALID", ignoreCase = true)) {
@@ -57,6 +81,12 @@ object TaskActions {
         Patcher.checkoutUpstreamBranch(project, extension.upstreamBranch.get(), extension, lastCommitId, true)
     }
 
+    /**
+     * Split porting sources from the working directory, into standalone code
+     *
+     * @param project The Gradle Project that is currently being processed
+     * @param extension The OrionPortingExtension that was configured for use in this task
+     */
     fun splitSources(project: Project, extension: OrionPortingExtension) {
         if (!Files.exists(Constants.patcherWorkdir))
             throw GradleException("Working directory does not exist")
@@ -72,6 +102,14 @@ object TaskActions {
         }
     }
 
+    /**
+     * Update the upstream branch commit reference that is being used for the base sources directory
+     * during porting
+     *
+     * @param project The Gradle Project that is currently being processed
+     * @param logger The Gradle Logger that is currently used
+     * @param extension The OrionPortingExtension that was configured for use in this task
+     */
     fun updateCommitSha(project: Project, logger: Logger, extension: OrionPortingExtension) {
         if (!extension.upstreamBranch.isPresent || extension.upstreamBranch.get().equals("INVALID", ignoreCase = true)) {
             throw GradleException("No upstream branch specified.")

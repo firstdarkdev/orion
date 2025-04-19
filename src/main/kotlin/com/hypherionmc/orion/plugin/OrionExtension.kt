@@ -19,7 +19,12 @@ import org.gradle.api.provider.Property
 import org.gradle.util.internal.ConfigureUtil
 import java.util.*
 
-
+/**
+ * @author HypherionSA
+ *
+ * Main Plugin Gradle Extension, to handle setting up things like our Maven Repos, versioning and various
+ * external tools
+ */
 open class OrionExtension(pp: Project) {
 
     val versioning: Versioning = Versioning()
@@ -32,6 +37,7 @@ open class OrionExtension(pp: Project) {
     val project: Project = pp
 
     init {
+        // Build the version number for the project
         if (project.hasProperty("version_major"))
             versioning.major(Integer.parseInt(project.properties["version_major"].toString()))
 
@@ -51,27 +57,62 @@ open class OrionExtension(pp: Project) {
             versioning.build(Integer.parseInt(project.properties["version_build"].toString()))
     }
 
+    /**
+     * Configure the version generator for the plugin
+     *
+     * @param action The DSL of the versioning
+     */
     fun versioning(action: Action<Versioning>) {
         action.execute(versioning)
     }
 
+    /**
+     * Configure the included tools for the plugin
+     *
+     * @param action The DSL of the tools
+     */
     fun tools(action: Action<Tools>) {
         action.execute(tools)
     }
 
+    /**
+     * Helper method to force the plugin to configure and apply everything early (Kotlin)
+     */
+    fun setup(configure: OrionExtension.() -> Unit) {
+        this.configure()
+        postConfiguration()
+    }
+
+    /**
+     * Helper method to force the plugin to configure and apply everything early
+     */
     fun setup(@DelegatesTo(value = OrionExtension::class, strategy = Closure.DELEGATE_FIRST) closure: Closure<OrionExtension>) {
+        println("Configuring ${Constants.ORION_VERSION} to ${Constants.ORION_VERSION}")
         ConfigureUtil.configure(closure, this)
         postConfiguration()
     }
 
+    /**
+     * Do plugin configuration as soon as orion.setup is called
+     */
     private fun postConfiguration() {
         GradleUtils.configureProject(project, this)
     }
 
+    /**
+     * Get an Environment Variable value from either Doppler or the system variables
+     *
+     * @param key The Environment Key to get the value of
+     */
     fun getenv(key: String): String? {
         return System.getenv(key)
     }
 
+    /**
+     * Configure Maven for publishing. This defaults to releases, or snapshots for porting/snapshot builds
+     *
+     * @return The configured maven repository
+     */
     fun getPublishingMaven(): Action<out MavenArtifactRepository> {
         return Action { mavenArtifactRepository: MavenArtifactRepository ->
             mavenArtifactRepository.setUrl(
@@ -85,6 +126,12 @@ open class OrionExtension(pp: Project) {
         }
     }
 
+    /**
+     * Helper method for Kotlin Build Scripts, to get the value of Project Properties without defining each of them
+     *
+     * @param key The property to try and get the value of
+     * @return The property value
+     */
     fun getProperty(key: String): String {
         return Optional
             .ofNullable(project.findProperty(key))
@@ -92,8 +139,12 @@ open class OrionExtension(pp: Project) {
             .orElseThrow { RuntimeException("Property $key is missing")}
     }
 
+    /**
+     * Versioning DSL extension
+     */
     open class Versioning {
 
+        // Default to 1.0.0 release
         var major: Int = 1
         var minor: Int = 0
         var patch: Int = 0
@@ -101,32 +152,68 @@ open class OrionExtension(pp: Project) {
         var identifier: String = "release"
         var isUploadBuild: Boolean = false
 
+        /**
+         * Manually configure the MAJOR version value
+         *
+         * @param major In semver format, for example 1
+         */
         fun major(major: Int) {
             this.major = major
         }
 
+        /**
+         * Manually configure the MINOR version value
+         *
+         * @param minor In semver format, for example 1
+         */
         fun minor(minor: Int) {
             this.minor = minor
         }
 
+        /**
+         * Manually configure the PATCH version value
+         *
+         * @param patch In semver format, for example 1
+         */
         fun patch(patch: Int) {
             this.patch = patch
         }
 
+        /**
+         * Manually configure the BUILD version value
+         *
+         * @param build In semver format, for example 1
+         */
         fun build(build: Int) {
             this.build = build
         }
 
+        /**
+         * Toggle the IDENTIFIER value being present in the version number
+         *
+         * @param value Should the identifier be present in the version
+         */
         fun uploadBuild(value: Boolean) {
             this.isUploadBuild = value
         }
 
+        /**
+         * Set the release identifier. For example, porting, snapshots, etc
+         *
+         * @param value The identifier. Defaults to release, or snapshots when on CI
+         */
         fun identifier(value: String) {
             this.identifier = value
         }
 
+        /**
+         * Build a version string to be used inside gradle.
+         * This takes into account the CI build number, if one is present
+         *
+         * @return Semver Version. For example: 1.0.0+port.1
+         */
         fun buildVersion(): String {
-            var v = "${major}.${minor}.${patch}}"
+            var v = "${major}.${minor}.${patch}"
 
             if (!isUploadBuild) {
                 v += "+${identifier}.${build}"
@@ -137,20 +224,40 @@ open class OrionExtension(pp: Project) {
 
     }
 
+    /**
+     * Tools DSL extension
+     */
     open class Tools {
 
         var enableLombok: Boolean = false
         var enableAutoService: Boolean = false
         var enableNoLoader: Boolean = false
+        var enableProcessors: Boolean = false
 
+        /**
+         * Enable the Orion Source Code Processors
+         */
+        fun processors() {
+            enableProcessors = true
+        }
+
+        /**
+         * Enable Lombok
+         */
         fun lombok() {
             enableLombok = true
         }
 
+        /**
+         * Enable Google Auto Service
+         */
         fun autoService() {
             enableAutoService = true
         }
 
+        /**
+         * Enable Dummy Modloader code for Nojang Powered Projects
+         */
         fun noLoader() {
             enableNoLoader = true
         }

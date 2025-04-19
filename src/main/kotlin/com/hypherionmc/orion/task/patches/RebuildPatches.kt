@@ -15,6 +15,11 @@ import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
+/**
+ * @author HypherionSA
+ *
+ * Helper task to rebuild patches, when porting to a new Minecraft Version is being done
+ */
 open class RebuildPatches: DefaultTask() {
 
     @TaskAction

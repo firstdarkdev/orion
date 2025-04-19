@@ -8,8 +8,14 @@ package com.hypherionmc.orion.utils
 
 import com.hypherionmc.orion.Constants
 import com.hypherionmc.orion.plugin.OrionExtension
+import com.hypherionmc.orion.plugin.OrionPlugin
+import com.hypherionmc.orion.plugin.paper.OrigamiPlugin
+import com.hypherionmc.orion.task.WrapProcessor
+import com.hypherionmc.orion.task.paper.BeforeCompileTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.compile.JavaCompile
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -99,6 +105,29 @@ object GradleUtils {
         if (extension.tools.enableNoLoader) {
             p.dependencies.add("compileOnly", Constants.NO_LOADER)
         }
+
+        // Orion Annotations
+        if (extension.tools.enableProcessors) {
+            p.dependencies.add("compileOnly", "com.hypherionmc.modutils:orion-tools:${Constants.ORION_VERSION}:annotations")
+            p.dependencies.add("testCompileOnly", "com.hypherionmc.modutils:orion-tools:${Constants.ORION_VERSION}:annotations")
+
+            // Since our processor modifies the raw source code, without affecting the original, we need to register
+            // the processing task, and tell JavaCompile to use our modified source code instead for compiling
+            val processTask = p.tasks.register("orionProcessor", WrapProcessor::class.java)
+            if (p.plugins.hasPlugin(OrigamiPlugin::class.java)) {
+                p.tasks.withType(BeforeCompileTask::class.java).configureEach { task ->
+                    task.dependsOn(processTask)
+                    p.tasks.withType(JavaCompile::class.java).configureEach { tt ->
+                        tt.setSource(p.layout.buildDirectory.dir("generated/wrapped-sources"))
+                    }
+                }
+            } else {
+                p.tasks.withType(JavaCompile::class.java).configureEach { task ->
+                    task.dependsOn(processTask)
+                    task.setSource(p.layout.buildDirectory.dir("generated/wrapped-sources"))
+                }
+            }
+        }
     }
 
     /**
@@ -132,6 +161,7 @@ object GradleUtils {
                 val files = libsDir.listFiles() ?: return@doLast
 
                 for (f in Arrays.stream(files).filter { f -> !f.isDirectory }.collect(Collectors.toList())) {
+                    // We don't want junk jars, so we exclude it
                     if (f.name.contains("-dev-shadow") || f.name.contains("-dev") || f.name.contains("-all") || f.name.contains("-slim")) {
                         f.delete()
                         continue

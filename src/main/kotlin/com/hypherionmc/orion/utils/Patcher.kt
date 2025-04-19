@@ -26,6 +26,7 @@ import kotlin.io.path.absolutePathString
 
 /**
  * @author HypherionSA
+ *
  * Patcher class to manage generating and applying patches, and working with branches
  */
 object Patcher {

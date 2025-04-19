@@ -6,6 +6,7 @@
  */
 package com.hypherionmc.orion
 
+import com.hypherionmc.orion.plugin.OrionPlugin
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -15,6 +16,7 @@ object Constants {
     // Strings
     const val TASK_GROUP  = "orion"
     const val PATCH_GROUP: String = "patches"
+    val ORION_VERSION:String = OrionPlugin::class.java.`package`?.implementationVersion.toString()
     
     // Tool Deps
     const val AUTO_SERVICE: String = "com.google.auto.service:auto-service:1.1.1"

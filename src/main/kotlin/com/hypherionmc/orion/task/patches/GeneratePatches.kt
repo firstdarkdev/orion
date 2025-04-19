@@ -12,6 +12,11 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 
+/**
+ * @author HypherionSA
+ *
+ * Task to generate patches, for code that was backported to different versions
+ */
 open class GeneratePatches: DefaultTask() {
 
     @TaskAction
