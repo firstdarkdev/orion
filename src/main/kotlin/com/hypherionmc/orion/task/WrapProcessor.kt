@@ -60,7 +60,7 @@ open class WrapProcessor: DefaultTask() {
     }
 
     /**
-     * Inject the needed methods, fields and constructors into wrapped classes
+     * Inject the necessary methods, fields and constructors into wrapped classes
      *
      * @param content The Raw Source code that needs to be processed
      */
@@ -68,18 +68,27 @@ open class WrapProcessor: DefaultTask() {
         val cu: CompilationUnit = JavaParser().parse(content).result.getOrNull() ?: return content
 
         // Try to determine the class, from the source code
-        val clazz = cu.types
+        cu.types
             .filterIsInstance<ClassOrInterfaceDeclaration>()
-            .firstOrNull() ?: return content
+            .forEach { processClass(it) }
+
+        return cu.toString()
+    }
+
+    private fun processClass(clazz: ClassOrInterfaceDeclaration) {
+        // Handle nested classes recursively
+        clazz.members
+            .filterIsInstance<ClassOrInterfaceDeclaration>()
+            .forEach { processClass(it) }
 
         // Process the annotation
         val wrapAnnotation = clazz.annotations
             .filterIsInstance<SingleMemberAnnotationExpr>()
-            .firstOrNull { it.nameAsString == "WrapClass" } ?: return content
+            .firstOrNull { it.nameAsString == "WrapClass" } ?: return
 
         // Get a reference to the class that code is wrapping
-        val classExpr = wrapAnnotation.memberValue as? ClassExpr ?: return content
-        val wrappedType = (classExpr.type as ClassOrInterfaceType).nameAsString
+        val classExpr = wrapAnnotation.memberValue as? ClassExpr ?: return
+        val wrappedType = (classExpr.type as ClassOrInterfaceType).toQualifiedName()
 
         // Check if the _internal field already exists in the code. If it doesn't, generate it
         if (!clazz.fields.any { it.variables.any { v -> v.nameAsString == "_internal" }}) {
@@ -92,13 +101,19 @@ open class WrapProcessor: DefaultTask() {
         }
 
         // Generate a private constructor that takes in the _internal class a parameter
+        val constructorBody = BlockStmt()
+
+        if (clazz.extendedTypes.isNotEmpty()) {
+            constructorBody.addStatement("super(internal);")
+        }
+
+        constructorBody.addStatement("this._internal = internal;")
+
         val constructor = ConstructorDeclaration()
             .setName(clazz.nameAsString)
-            .addModifier(Modifier.Keyword.PRIVATE)
+            .addModifier(Modifier.Keyword.PROTECTED)
             .addParameter(wrappedType, "internal")
-            .setBody(
-                BlockStmt().addStatement("this._internal = internal;")
-            )
+            .setBody(constructorBody)
 
         // Register the constructor if it doesn't already exist
         if (clazz.constructors.none { it.parameters.size == 1 && it.parameters[0].typeAsString == wrappedType }) {
@@ -131,8 +146,9 @@ open class WrapProcessor: DefaultTask() {
         if (!clazz.methods.any { it.nameAsString == "unwrap" }) {
             clazz.addMember(unwrapMethod)
         }
-
-        return cu.toString()
     }
 
+    private fun ClassOrInterfaceType.toQualifiedName(): String {
+        return this.scope.map { it.toQualifiedName() + "." }.orElse("") + this.nameAsString
+    }
 }

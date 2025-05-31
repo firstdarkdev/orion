@@ -8,13 +8,13 @@ package com.hypherionmc.orion.utils
 
 import com.hypherionmc.orion.Constants
 import com.hypherionmc.orion.plugin.OrionExtension
-import com.hypherionmc.orion.plugin.OrionPlugin
 import com.hypherionmc.orion.plugin.paper.OrigamiPlugin
 import com.hypherionmc.orion.task.WrapProcessor
+import com.hypherionmc.orion.task.merging.CombineJarsTask
 import com.hypherionmc.orion.task.paper.BeforeCompileTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.JavaCompile
 import java.io.File
 import java.net.URI
@@ -43,6 +43,22 @@ object GradleUtils {
         }
 
         registerCleanup(target.rootProject)
+
+        // Register Jar Merging Task
+        if (extension.jarMerger.enabled) {
+            val p = target.rootProject
+
+            val task = p.tasks.register("combineJars", CombineJarsTask::class.java)
+            task.configure { c -> c.group = Constants.TASK_GROUP }
+
+            for (entry in extension.jarMerger.inputs) {
+                val pject = p.childProjects[entry.value.first]
+
+                pject?.afterEvaluate {
+                    FileTools.resolveInputTask(pject, entry.value.second, task.get())
+                }
+            }
+        }
 
         target.allprojects {p ->
             p.group = p.rootProject.group
@@ -125,16 +141,30 @@ object GradleUtils {
             if (p.plugins.hasPlugin(OrigamiPlugin::class.java)) {
                 p.tasks.withType(BeforeCompileTask::class.java).configureEach { task ->
                     task.dependsOn(processTask)
-                    p.tasks.withType(JavaCompile::class.java).configureEach { tt ->
-                        tt.setSource(p.layout.buildDirectory.dir("generated/wrapped-sources"))
-                    }
+                    registerProcessorCompileTask(p, processTask)
                 }
             } else {
-                p.tasks.withType(JavaCompile::class.java).configureEach { task ->
-                    task.dependsOn(processTask)
-                    task.setSource(p.layout.buildDirectory.dir("generated/wrapped-sources"))
-                }
+                registerProcessorCompileTask(p, processTask)
             }
+        }
+    }
+
+    private fun registerProcessorCompileTask(p: Project, processTask: TaskProvider<WrapProcessor>) {
+        p.tasks.withType(JavaCompile::class.java).configureEach { task ->
+            task.dependsOn(processTask)
+
+            val sources = mutableListOf<Any>()
+            sources.add(p.layout.buildDirectory.dir("generated/wrapped-sources"))
+
+            if (!p.name.equals("Common", ignoreCase = true)) {
+                val commonProject = p.rootProject.project(":Common")
+                val commonSources = commonProject.layout.buildDirectory.dir("generated/wrapped-sources")
+                task.dependsOn(commonProject.tasks.named("orionProcessor"))
+                sources.add(commonSources)
+            }
+
+            // Set ONLY the wrapped sources as input for compilation
+            task.setSource(sources)
         }
     }
 

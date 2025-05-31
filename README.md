@@ -15,6 +15,7 @@ A Gradle utilities plugin for First Dark Development.
 * Processing tools to compile Paper Plugins from shared platform code
 * Using Doppler.com secrets as ENV variables
 * Tools for working with Kotlin Build Scripts
+* Building a single jar that contains multiple modloader jars
 
 ## Note
 

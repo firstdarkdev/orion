@@ -61,6 +61,9 @@ dependencies {
     shadeMe("org.eclipse.jgit:org.eclipse.jgit:${jgit}")
     shadeMe("commons-io:commons-io:${commons_io}")
     shadeMe("com.github.javaparser:javaparser-core:3.24.0")
+    shadeMe("com.hypherionmc:jarmanager:1.0.5")
+    shadeMe("org.tomlj:tomlj:1.1.1")
+    shadeMe("org.apache.maven:maven-artifact:4.0.0-rc-3")
 
     // Lombok
     compileOnly("org.projectlombok:lombok:${lombok}")

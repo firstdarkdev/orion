@@ -16,6 +16,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.provider.Property
+import org.gradle.internal.component.external.model.ComponentVariant
 import org.gradle.util.internal.ConfigureUtil
 import java.util.*
 
@@ -29,6 +30,7 @@ open class OrionExtension(pp: Project) {
 
     val versioning: Versioning = Versioning()
     val tools: Tools = Tools()
+    val jarMerger: JarMerger = JarMerger()
     val enableReleasesMaven: Property<Boolean> = pp.objects.property(Boolean::class.java).convention(false)
     val enableSnapshotsMaven: Property<Boolean> = pp.objects.property(Boolean::class.java).convention(false)
     val enableMirrorMaven: Property<Boolean> = pp.objects.property(Boolean::class.java).convention(false)
@@ -64,6 +66,10 @@ open class OrionExtension(pp: Project) {
      */
     fun versioning(action: Action<Versioning>) {
         action.execute(versioning)
+    }
+
+    fun jarMerger(action: Action<JarMerger>) {
+        action.execute(jarMerger)
     }
 
     /**
@@ -260,6 +266,42 @@ open class OrionExtension(pp: Project) {
          */
         fun noLoader() {
             enableNoLoader = true
+        }
+    }
+
+    open class JarMerger {
+
+        var enabled = false
+        val inputs = mutableMapOf<String, Pair<String, Any>>()
+        var outputJarName: String? = null
+        val scanExclude = mutableSetOf<String>()
+
+        fun enable() {
+            enabled = true
+        }
+
+        fun outputJarName(name: String) {
+            outputJarName = name
+        }
+
+        fun excludeFromScan(input: List<String>) {
+            scanExclude.addAll(input)
+        }
+
+        fun neoforge(input: Any, projectName: String = "NeoForge") {
+            inputs.put("neoforge", Pair(projectName, input))
+        }
+
+        fun forge(input: Any, projectName: String = "Forge") {
+            inputs.put("forge", Pair(projectName, input))
+        }
+
+        fun quilt(input: Any, projectName: String = "Quilt") {
+            inputs.put("quilt", Pair(projectName, input))
+        }
+
+        fun fabric(input: Any, projectName: String = "Fabric") {
+            inputs.put("fabric", Pair(projectName, input))
         }
     }
 
