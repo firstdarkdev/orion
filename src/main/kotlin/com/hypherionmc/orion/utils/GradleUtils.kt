@@ -138,14 +138,7 @@ object GradleUtils {
             // Since our processor modifies the raw source code, without affecting the original, we need to register
             // the processing task, and tell JavaCompile to use our modified source code instead for compiling
             val processTask = p.tasks.register("orionProcessor", WrapProcessor::class.java)
-            if (p.plugins.hasPlugin(OrigamiPlugin::class.java)) {
-                p.tasks.withType(BeforeCompileTask::class.java).configureEach { task ->
-                    task.dependsOn(processTask)
-                    registerProcessorCompileTask(p, processTask)
-                }
-            } else {
-                registerProcessorCompileTask(p, processTask)
-            }
+            registerProcessorCompileTask(p, processTask)
         }
     }
 

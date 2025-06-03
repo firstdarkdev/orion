@@ -165,7 +165,7 @@ object FileTools {
         val version = parts[2]
         val classifier = if (parts.size == 4) parts[3] else null
 
-        val baseUrl = "https://maven.firstdark.dev/snapshots"
+        val baseUrl = "https://maven.firstdark.dev/releases"
         val jarName = buildString {
             append(artifactId).append("-").append(version)
             if (classifier != null) append("-").append(classifier)

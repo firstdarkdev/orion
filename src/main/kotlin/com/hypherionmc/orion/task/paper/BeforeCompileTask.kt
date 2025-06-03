@@ -12,6 +12,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.language.jvm.tasks.ProcessResources
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
@@ -21,6 +22,7 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
+import kotlin.collections.listOf
 
 /**
  * @author HypherionSA
@@ -42,6 +44,7 @@ open class BeforeCompileTask: DefaultTask() {
             ?: throw GradleException("Cannot find common project ${extension.commonProject.get()}")
 
         val sourcesFolder = File(common.projectDir, "src/main")
+        val altSources = common.layout.buildDirectory.dir("generated/wrapped-sources").get().asFile
 
         // Check that the shared source code folder exists
         if (!sourcesFolder.exists()) {
@@ -58,12 +61,21 @@ open class BeforeCompileTask: DefaultTask() {
 
         FileUtils.copyDirectory(sourcesFolder, destFolder)
 
+        if (altSources.exists()) {
+            FileUtils.deleteDirectory(File(destFolder, "java"))
+            FileUtils.copyDirectory(altSources, destFolder)
+        }
+
+        val removedFiles = mutableSetOf<String>()
+
         // Filter out excluded code packages
         project.logger.lifecycle("⚡ Removing Excluded Packages")
         for (excludedPackage in extension.excludedPackages.get()) {
             val pkg = File(destFolder, "java/${excludedPackage.replace('.', '/')}")
-            if (pkg.exists())
+            if (pkg.exists()) {
                 FileUtils.deleteDirectory(pkg)
+                removedFiles.add(pkg.absolutePath)
+            }
         }
         logger.lifecycle("\uD83E\uDDF9 Successfully processed Excluded Packages")
 
@@ -83,8 +95,12 @@ open class BeforeCompileTask: DefaultTask() {
 
         processComments(destFolder)
 
+        val sources = mutableListOf<Any>()
+        sources.add(project.layout.buildDirectory.dir("generated/wrapped-sources"))
+        sources.add(File(destFolder, "java"))
+
         // Give the processed sources and resources back to the compile task
-        project.tasks.withType(JavaCompile::class.java).forEach { t -> t.source(File(destFolder, "java")) }
+        project.tasks.withType(JavaCompile::class.java).forEach { t -> t.setSource(sources) }
     }
 
     /**
