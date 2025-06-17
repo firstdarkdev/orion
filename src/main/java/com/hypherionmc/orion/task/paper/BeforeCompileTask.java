@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 public class BeforeCompileTask extends DefaultTask {
 
     @TaskAction
-    private void prepareSourcesTask() throws IOException {
+    public void prepareSourcesTask() throws IOException {
         OrigamiExtension extension = getProject().getExtensions().findByType(OrigamiExtension.class);
 
         if (extension == null)
