@@ -119,7 +119,7 @@ open class OrionExtension(pp: Project) {
      *
      * @return The configured maven repository
      */
-    fun getPublishingMaven(): Action<out MavenArtifactRepository> {
+    fun getPublishingMaven(): Action<MavenArtifactRepository> {
         return Action { mavenArtifactRepository: MavenArtifactRepository ->
             mavenArtifactRepository.setUrl(
                 if (!versioning.identifier.equals("release", ignoreCase = true)) Constants.MAVEN_SNAPSHOT_URL else Constants.MAVEN_URL
