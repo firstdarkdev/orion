@@ -122,14 +122,6 @@ object GradleUtils {
             p.dependencies.add("compileOnly", Constants.NO_LOADER)
         }
 
-        // Automatically register shadowjar configurations
-        if (p.plugins.hasPlugin("com.github.johnrengelman.shadow") || p.plugins.hasPlugin("com.gradleup.shadow")) {
-            val shade = p.configurations.create("shaded")
-            p.configurations.named("implementation") {
-                it.extendsFrom(shade)
-            }
-        }
-
         // Orion Annotations
         if (extension.tools.enableProcessors) {
             p.dependencies.add("compileOnly", "com.hypherionmc.modutils:orion-tools:${Constants.ORION_VERSION}:annotations")
