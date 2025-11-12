@@ -8,10 +8,7 @@ package com.hypherionmc.orion.utils
 
 import com.hypherionmc.orion.Constants
 import com.hypherionmc.orion.plugin.OrionExtension
-import com.hypherionmc.orion.plugin.paper.OrigamiPlugin
-import com.hypherionmc.orion.task.WrapProcessor
 import com.hypherionmc.orion.task.merging.CombineJarsTask
-import com.hypherionmc.orion.task.paper.BeforeCompileTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
@@ -121,36 +118,6 @@ object GradleUtils {
         if (extension.tools.enableNoLoader) {
             p.dependencies.add("compileOnly", Constants.NO_LOADER)
         }
-
-        // Orion Annotations
-        if (extension.tools.enableProcessors) {
-            p.dependencies.add("compileOnly", "com.hypherionmc.modutils:orion-tools:${Constants.ORION_VERSION}:annotations")
-            p.dependencies.add("testCompileOnly", "com.hypherionmc.modutils:orion-tools:${Constants.ORION_VERSION}:annotations")
-
-            // Since our processor modifies the raw source code, without affecting the original, we need to register
-            // the processing task, and tell JavaCompile to use our modified source code instead for compiling
-            val processTask = p.tasks.register("orionProcessor", WrapProcessor::class.java)
-            registerProcessorCompileTask(p, processTask)
-        }
-    }
-
-    private fun registerProcessorCompileTask(p: Project, processTask: TaskProvider<WrapProcessor>) {
-        p.tasks.withType(JavaCompile::class.java).configureEach { task ->
-            task.dependsOn(processTask)
-
-            val sources = mutableListOf<Any>()
-            sources.add(p.layout.buildDirectory.dir("generated/wrapped-sources"))
-
-            if (!p.name.equals("Common", ignoreCase = true)) {
-                val commonProject = p.rootProject.project(":Common")
-                val commonSources = commonProject.layout.buildDirectory.dir("generated/wrapped-sources")
-                task.dependsOn(commonProject.tasks.named("orionProcessor"))
-                sources.add(commonSources)
-            }
-
-            // Set ONLY the wrapped sources as input for compilation
-            task.setSource(sources)
-        }
     }
 
     /**
@@ -174,7 +141,7 @@ object GradleUtils {
      * @param target The project this logic must be applied to
      */
     private fun registerCopyLogic(target: Project) {
-        if (target.name.equals("common", ignoreCase = true) || target.rootProject == target)
+        if (target.name.equals("common", ignoreCase = true))
             return
 
         target.afterEvaluate { _ ->

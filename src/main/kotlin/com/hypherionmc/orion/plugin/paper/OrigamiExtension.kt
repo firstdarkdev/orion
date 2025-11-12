@@ -20,6 +20,6 @@ open class OrigamiExtension(project: Project) {
 
     val excludedPackages: ListProperty<String> = project.objects.listProperty(String::class.java).convention(emptyList())
     val excludedResources: ListProperty<String> = project.objects.listProperty(String::class.java).convention(emptyList())
-    val commonProject: Property<String> = project.objects.property(String::class.java).convention("Common")
+    val sourceSet: Property<String> = project.objects.property(String::class.java).convention("paper")
 
 }

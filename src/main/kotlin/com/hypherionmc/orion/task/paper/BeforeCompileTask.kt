@@ -10,9 +10,9 @@ import com.hypherionmc.orion.plugin.paper.OrigamiExtension
 import org.apache.commons.io.FileUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.language.jvm.tasks.ProcessResources
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
@@ -22,7 +22,6 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
-import kotlin.collections.listOf
 
 /**
  * @author HypherionSA
@@ -39,68 +38,58 @@ open class BeforeCompileTask: DefaultTask() {
         val extension = project.extensions.getByType(OrigamiExtension::class.java)
             ?: throw GradleException("Cannot find origami extension on project")
 
-        // Check that the COMMON (or shared project) is configured, and accessible
-        val common = project.rootProject.findProject(extension.commonProject.get())
-            ?: throw GradleException("Cannot find common project ${extension.commonProject.get()}")
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        val sourceSet = sourceSets.getByName("main")
+        val paperSourceSet = sourceSets.getByName(extension.sourceSet.get())
 
-        val sourcesFolder = File(common.projectDir, "src/main")
-        val altSources = common.layout.buildDirectory.dir("generated/wrapped-sources").get().asFile
+        val javaSrcDir = sourceSet.java.srcDirs.first()
+        val resourcesSrcDir = sourceSet.resources.srcDirs.first()
 
-        // Check that the shared source code folder exists
-        if (!sourcesFolder.exists()) {
-            project.logger.warn("Cannot find sources folder in ${extension.commonProject.get()}")
-            return
-        }
-
-        project.logger.lifecycle("⚡ Start Processing Plugin Shared Sources")
+        project.logger.lifecycle("⚡ Preparing Paper Sources")
 
         // Set up the temporary processing folder
-        val destFolder = File(project.layout.buildDirectory.asFile.get(), "commonShared")
+        val destFolder = project.layout.buildDirectory.dir("processedSources/main").get().asFile
         if (destFolder.exists())
             FileUtils.deleteDirectory(destFolder)
 
-        FileUtils.copyDirectory(sourcesFolder, destFolder)
-
-        if (altSources.exists()) {
-            FileUtils.deleteDirectory(File(destFolder, "java"))
-            FileUtils.copyDirectory(altSources, destFolder)
-        }
+        FileUtils.copyDirectory(javaSrcDir, File(destFolder, "java"))
+        FileUtils.copyDirectory(resourcesSrcDir, File(destFolder, "resources"))
 
         val removedFiles = mutableSetOf<String>()
 
         // Filter out excluded code packages
-        project.logger.lifecycle("⚡ Removing Excluded Packages")
         for (excludedPackage in extension.excludedPackages.get()) {
             val pkg = File(destFolder, "java/${excludedPackage.replace('.', '/')}")
             if (pkg.exists()) {
-                FileUtils.deleteDirectory(pkg)
-                removedFiles.add(pkg.absolutePath)
+                removedFiles.add(excludedPackage.replace('.', '/'))
             }
         }
-        logger.lifecycle("\uD83E\uDDF9 Successfully processed Excluded Packages")
 
         // Filter out excluded resources
-        project.logger.lifecycle("⚡ Removing Excluded Resources")
         for (excludedResource in extension.excludedResources.get()) {
             val res = File(destFolder, "resources/${excludedResource}")
             if (res.exists()) {
-                if (res.isDirectory) {
-                    FileUtils.deleteDirectory(res)
-                } else {
-                    FileUtils.delete(res)
-                }
+                removedFiles.add(excludedResource)
             }
         }
-        logger.lifecycle("\uD83E\uDDF9 Successfully processed Excluded Resources")
 
-        processComments(destFolder)
+        processComments(destFolder, removedFiles)
 
-        val sources = mutableListOf<Any>()
-        sources.add(project.layout.buildDirectory.dir("generated/wrapped-sources"))
-        sources.add(File(destFolder, "java"))
+        val newSourceDirs = mutableListOf(
+            File(destFolder, "java"),
+            File(destFolder, "resources")
+        )
 
-        // Give the processed sources and resources back to the compile task
-        project.tasks.withType(JavaCompile::class.java).forEach { t -> t.setSource(sources) }
+        val compileTaskName = paperSourceSet.getCompileTaskName("java")
+        val compileTask = project.tasks.named(compileTaskName, JavaCompile::class.java).get()
+
+        newSourceDirs.forEach { compileTask.source(it) }
+
+        val markerDir = File(destFolder, "marker.txt")
+        if (markerDir.exists())
+            FileUtils.delete(markerDir)
+
+        FileUtils.write(markerDir, removedFiles.joinToString("\n"), StandardCharsets.UTF_8)
     }
 
     /**
@@ -108,14 +97,13 @@ open class BeforeCompileTask: DefaultTask() {
      *
      * @param sourceDir The Directory that is being processed
      */
-    private fun processComments(sourceDir: File) {
-        project.logger.lifecycle("⚡ Running Comment Processor")
+    private fun processComments(sourceDir: File, removedFiles: MutableSet<String>) {
         try {
             Files.walkFileTree(sourceDir.toPath(), object : SimpleFileVisitor<Path>() {
                 @Throws(IOException::class)
                 override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
                     if (Files.isRegularFile(file) && file.toString().endsWith(".java")) {
-                        stripSpecialCode(file.toFile())
+                        stripSpecialCode(file.toFile(), removedFiles)
                     }
                     return FileVisitResult.CONTINUE
                 }
@@ -123,7 +111,6 @@ open class BeforeCompileTask: DefaultTask() {
         } catch (e: IOException) {
             throw GradleException(e.message ?: "Error while reading file", e)
         }
-        logger.lifecycle("\uD83E\uDDF9 Successfully processed Comments")
     }
 
     /**
@@ -131,13 +118,13 @@ open class BeforeCompileTask: DefaultTask() {
      *
      * @param file The File that is being processed
      */
-    private fun stripSpecialCode(file: File) {
+    private fun stripSpecialCode(file: File, removedFiles: MutableSet<String>) {
         try {
             val content = FileUtils.readFileToString(file, StandardCharsets.UTF_8)
 
             // File is marked to be excluded from Plugin Sources, so we delete it
             if (content.contains("// @excludeplugin")) {
-                FileUtils.delete(file)
+                removedFiles.add(file.absolutePath.replace(".", "/"))
                 return
             }
 
