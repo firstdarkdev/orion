@@ -11,8 +11,6 @@ import com.hypherionmc.orion.plugin.OrionExtension
 import com.hypherionmc.orion.task.merging.CombineJarsTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.compile.JavaCompile
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -25,6 +23,13 @@ import java.util.stream.Collectors
  * Main plugin logic to apply versioning and mavens
  */
 object GradleUtils {
+
+    fun getProperty(project: Project, key: String): String {
+        return Optional
+            .ofNullable(project.findProperty(key))
+            .map { o -> o.toString() }
+            .orElseThrow { RuntimeException("Property $key is missing")}
+    }
 
     /**
      * Configure the gradle project, based on the plugin configuration

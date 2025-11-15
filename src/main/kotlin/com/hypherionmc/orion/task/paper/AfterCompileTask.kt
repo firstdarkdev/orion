@@ -30,12 +30,10 @@ open class AfterCompileTask: DefaultTask() {
                 val resourceFile = sourceSets.named("main").get().output.resourcesDir?.resolve(it)
 
                 if (fileToDelete.exists()) {
-                    project.logger.lifecycle("Deleted: $fileToDelete")
                     FileUtils.deleteQuietly(fileToDelete)
                 }
 
                 if (resourceFile != null && resourceFile.exists()) {
-                    project.logger.lifecycle("Deleted: $resourceFile")
                     FileUtils.deleteQuietly(resourceFile)
                 }
             }

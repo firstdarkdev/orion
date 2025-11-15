@@ -124,7 +124,13 @@ open class BeforeCompileTask: DefaultTask() {
 
             // File is marked to be excluded from Plugin Sources, so we delete it
             if (content.contains("// @excludeplugin")) {
-                removedFiles.add(file.absolutePath.replace(".", "/"))
+                val normalized = file.absolutePath.replace(File.separatorChar, '/')
+                val idx = normalized.indexOf("/java/")
+
+                if (idx != -1) {
+                    val relative = normalized.substring(idx + "/java/".length)
+                    removedFiles.add(relative)
+                }
                 return
             }
 

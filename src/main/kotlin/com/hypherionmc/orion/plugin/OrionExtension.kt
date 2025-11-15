@@ -13,10 +13,10 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.Project
+import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.provider.Property
-import org.gradle.internal.component.external.model.ComponentVariant
 import org.gradle.util.internal.ConfigureUtil
 import java.util.*
 
@@ -129,6 +129,13 @@ open class OrionExtension(pp: Project) {
                 c.username = Environment.getenv("MAVEN_USER")
                 c.password = Environment.getenv("MAVEN_PASS")
             }
+        }
+    }
+
+    fun unimaven(): MavenArtifactRepository {
+        return project.repositories.maven {
+            it.name = "unimaven"
+            it.setUrl("https://unimaven.cc")
         }
     }
 

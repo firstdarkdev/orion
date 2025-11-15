@@ -55,7 +55,6 @@ class OrigamiPlugin: Plugin<Project> {
                     val mainOutput = target.layout.buildDirectory.dir("classes/java/main").get().asFile
                     if (mainOutput.exists()) {
                         mainOutput.deleteRecursively()
-                        target.logger.lifecycle("⚡ Deleted main output: ${mainOutput.absolutePath}")
                     }
                 }
             }
