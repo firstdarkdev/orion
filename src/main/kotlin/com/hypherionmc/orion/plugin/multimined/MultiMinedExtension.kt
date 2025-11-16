@@ -318,7 +318,7 @@ open class MultiMinedExtension(private val project: Project) {
                     )
 
                     if (loader.getMixinConfig().isNotEmpty()) {
-                        attr = attr + ("MixinConfig" to loader.getMixinConfig().joinToString(","))
+                        attr = attr + ("MixinConfigs" to loader.getMixinConfig().joinToString(","))
                     }
 
                     it.manifest { man ->
