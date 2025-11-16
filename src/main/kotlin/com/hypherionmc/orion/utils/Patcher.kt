@@ -60,7 +60,7 @@ object Patcher {
 
                 try {
                     val fileData = repository.open(objectId).bytes
-                    val targetFile = File(repository.workTree, Constants.patcherUpstream(project).toString() + File.separator + filePath)
+                    val targetFile = File(Constants.patcherUpstream(project).toFile(), filePath)
                     targetFile.parentFile.mkdirs()
 
                     FileOutputStream(targetFile).use { fos -> fos.write(fileData) }
