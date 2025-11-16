@@ -69,6 +69,7 @@ dependencies {
     compileOnly("xyz.wagyourtail.unimined:unimined:1.4.2-SNAPSHOT")
     compileOnly("xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm:1.2.1")
     compileOnly("com.gradleup.shadow:shadow-gradle-plugin:9.2.0")
+    compileOnly("io.sigpipe:jbsdiff:1.0")
 }
 
 tasks.named<ShadowJar>("shadowJar") {

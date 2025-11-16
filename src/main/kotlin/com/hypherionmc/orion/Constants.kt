@@ -30,7 +30,7 @@ object Constants {
     const val MAVEN_CENTRAL_URL: String = "https://mcentral.firstdark.dev/releases"
 
     // Porting Patcher
-    @JvmField val patcherUpstream: Path = Paths.get("upstream")
+    @JvmField val patcherUpstream: Path = Paths.get(".orion", "upstream")
     @JvmField val patcherWorkdir: Path = Paths.get("workspace")
     @JvmField val patcherCommit: File = File("commit.sha")
 }

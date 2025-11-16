@@ -22,7 +22,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
-import kotlin.io.path.absolutePathString
 
 /**
  * @author HypherionSA
@@ -100,7 +99,7 @@ object Patcher {
             .logTo(LoggingOutputStream(project.logger, LogLevel.LIFECYCLE))
             .aPath(Constants.patcherUpstream)
             .bPath(File(project.rootProject.rootDir, Constants.patcherWorkdir.toString() + File.separator + workingDir).toPath())
-            .outputPath(File(project.rootProject.rootDir, "patches/${workingDir}").toPath())
+            .outputPath(File(project.rootProject.rootDir, ".orion/patches/${workingDir}").toPath())
             .autoHeader(false)
             .summary(true)
             .aPrefix("a/")
@@ -119,6 +118,7 @@ object Patcher {
         if (exit != 0 && exit != 1) {
             throw RuntimeException("DiffPatch failed with exit code $exit")
         } else {
+            buildPatchFile(project)
             project.logger.lifecycle("\uD83C\uDF89 Generated Patches Successfully")
             cleanPatchesDir(File("patches"))
         }
@@ -133,10 +133,15 @@ object Patcher {
     @Throws(Exception::class)
     fun applyPatches(project: Project, workingDir: String, extension: OrionPortingExtension) {
         // Working directories
-        val base = File(project.rootProject.rootDir, "upstream")
-        val patches = File(project.rootProject.rootDir, "patches/$workingDir")
+        val patchPack = File(project.rootProject.rootDir, "versions/patches.patchpack")
+        val base = File(project.rootProject.rootDir, ".orion/upstream")
+        val patches = File(project.rootProject.rootDir, ".orion/patches/$workingDir")
         val out = File(project.rootProject.rootDir, Constants.patcherWorkdir.toString() + File.separator + workingDir)
         val rejects = File(project.rootProject.rootDir, "rejects/$workingDir")
+
+        if (patchPack.exists() && !File(project.rootProject.rootDir, ".orion/patches").exists()) {
+            FileTools.unzipToFolder(patchPack, File(project.rootProject.rootDir, ".orion/patches"))
+        }
 
         // Check if any patches have been generated. If not, we copy the upstream folder to the dev folder
         if (!hasPatches(patches)) {
@@ -171,6 +176,7 @@ object Patcher {
             project.logger.error("Patched failed to apply for {}", workingDir)
         }
 
+        FileUtils.deleteDirectory(File(project.rootProject.rootDir, ".orion/patches"))
         project.logger.lifecycle("\uD83C\uDF89 Applied Patches successfully")
     }
 
@@ -208,6 +214,16 @@ object Patcher {
         }
 
         if (ignored.contains(dir.name)) FileUtils.deleteQuietly(dir)
+    }
+
+    private fun buildPatchFile(project: Project) {
+        val patchFolder = File(project.rootProject.rootDir, ".orion/patches")
+        val outFile = File(project.rootProject.rootDir, "versions/patches.patchpack")
+
+        if (!outFile.parentFile.exists())
+            outFile.parentFile.mkdirs()
+
+        FileTools.zipFolderContents(patchFolder, outFile)
     }
 
 }

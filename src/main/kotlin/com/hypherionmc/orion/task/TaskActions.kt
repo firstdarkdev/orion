@@ -20,7 +20,7 @@ import java.nio.file.Files
 /**
  * @author HypherionSA
  *
- * Helper/Utility class to reduce duplicate code that are shared between tasks
+ * Helper/Utility class to reduce duplicate code that is shared between tasks
  */
 object TaskActions {
 
@@ -31,7 +31,7 @@ object TaskActions {
      * @param project The Gradle Project that is currently being processed
      */
     fun cleanWorkspace(logger: Logger, project: Project) {
-        project.delete(Constants.patcherWorkdir, Constants.patcherUpstream, File(project.rootProject.rootDir, "tmp"))
+        project.delete(Constants.patcherWorkdir, Constants.patcherUpstream, File(Constants.patcherWorkdir.toFile(), "tmp"), File(project.rootProject.rootDir, ".orion"))
         logger.lifecycle("\uD83E\uDDF9 Cleaned up working directories")
     }
 
@@ -94,7 +94,7 @@ object TaskActions {
         project.logger.lifecycle("⚡ Splitting sources into individual directories")
 
         for (b in extension.portingBranches.get()) {
-            val f = File(project.rootProject.rootDir, b)
+            val f = File(project.rootProject.rootDir, "versions/$b")
             if (f.exists())
                 FileUtils.deleteQuietly(f)
 

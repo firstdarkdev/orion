@@ -33,7 +33,7 @@ open class RebuildPatches: DefaultTask() {
         TaskActions.setupWorkspace(project, extension)
 
         for (b in extension.portingBranches.get()) {
-            val f = File(project.rootProject.rootDir, b)
+            val f = File(project.rootProject.rootDir, "versions/$b")
             val out = Constants.patcherWorkdir.resolve(b).toFile()
 
             if (out.exists())

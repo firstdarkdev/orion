@@ -2,8 +2,10 @@ package com.hypherionmc.orion.plugin.multimined
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.hypherionmc.orion.utils.GradleUtils
+import com.hypherionmc.orion.utils.unimined.PaperMCTransformer
 import org.apache.commons.lang3.StringUtils
 import org.apache.maven.artifact.versioning.ArtifactVersion
+import org.apache.maven.artifact.versioning.VersionRange
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -13,6 +15,7 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.util.internal.VersionNumber
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import javax.inject.Inject
 
 open class MultiMinedExtension(private val project: Project) {
@@ -241,7 +244,7 @@ open class MultiMinedExtension(private val project: Project) {
                     combineWith(main)
                     side("server")
 
-                    paper {
+                    customPatcher(PaperMCTransformer(project, this as MinecraftProvider)) {
                         loader(version)
                     }
                 }
@@ -268,7 +271,6 @@ open class MultiMinedExtension(private val project: Project) {
                     it.from(sourceSets.getByName(sourceSet).output)
 
                     val mavenRegex = Regex("""^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+(\*|\.\*)?$""")
-                    val pathRegex = Regex("""^[A-Za-z0-9._/\*-]+$""")
 
                     if (loader.getShadowJar()!!.getExclude().isNotEmpty() || loader.getShadowJar()!!.getRelocate().isNotEmpty()) {
                         // Configure dependencies to exclude
@@ -284,7 +286,7 @@ open class MultiMinedExtension(private val project: Project) {
                         if (loader.getShadowJar()!!.getExclude().isNotEmpty()) {
                             loader.getShadowJar()!!
                                 .getExclude()
-                                .filter { p -> !mavenRegex.matches(p) && pathRegex.matches(p) }
+                                .filter { p -> !mavenRegex.matches(p) }
                                 .forEach { p -> it.exclude(p) }
                         }
 
@@ -311,7 +313,10 @@ open class MultiMinedExtension(private val project: Project) {
                     it.asJar.archiveClassifier.set(null as String?)
                     it.asJar.archiveBaseName.set("${project.name}-${StringUtils.capitalize(sourceSet)}-${mcVersion}")
 
-                    if (isPaperJar) {
+                    val mcVer = VersionNumber.parse(mcVersion)
+                    val notObfedMc = VersionNumber.parse("1.20.5")
+
+                    if (isPaperJar && (mcVer >= notObfedMc)) {
                         it.prodNamespace("mojmap")
                     }
 

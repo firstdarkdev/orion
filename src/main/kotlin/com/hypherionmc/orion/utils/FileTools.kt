@@ -9,6 +9,9 @@ package com.hypherionmc.orion.utils
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.hypherionmc.orion.meta.ModData
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
+import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.IOUtils
 import org.apache.commons.io.output.NullOutputStream
@@ -187,4 +190,41 @@ object FileTools {
             println("Downloaded to: ${outputDir.toPath().toAbsolutePath()}")
         }
     }
+
+    fun zipFolderContents(sourceDir: File, outputZip: File) {
+        ZipArchiveOutputStream(outputZip).use { zipOut ->
+            sourceDir.walkTopDown()
+                .filter { it.isFile }
+                .forEach { file ->
+                    val entryName = file.relativeTo(sourceDir).path.replace(File.separatorChar, '/')
+                    val entry = ZipArchiveEntry(file, entryName)
+                    zipOut.putArchiveEntry(entry)
+                    file.inputStream().use { it.copyTo(zipOut) }
+                    zipOut.closeArchiveEntry()
+                }
+
+            zipOut.finish()
+        }
+    }
+
+    fun unzipToFolder(zipFile: File, targetDir: File) {
+        ZipFile(zipFile).use { zip ->
+            targetDir.mkdirs()
+            zip.entries.asSequence().forEach { entry ->
+                val outFile = File(targetDir, entry.name)
+                if (entry.isDirectory) {
+                    outFile.mkdirs()
+                } else {
+                    outFile.parentFile?.mkdirs()
+
+                    zip.getInputStream(entry).use { input ->
+                        outFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
