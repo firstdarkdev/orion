@@ -16,6 +16,7 @@ import org.gradle.util.internal.VersionNumber
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import java.util.Date
 import javax.inject.Inject
 
 open class MultiMinedExtension(private val project: Project) {
@@ -195,7 +196,7 @@ open class MultiMinedExtension(private val project: Project) {
                     neoForge {
                         loader(version)
                         if (neoforge.getMixinConfig().isNotEmpty()) {
-                            mixinConfig(*neoforge.getMixinConfig().toTypedArray())
+                            mixinConfig(neoforge.getMixinConfig())
                         }
                     }
 
@@ -221,7 +222,7 @@ open class MultiMinedExtension(private val project: Project) {
                         loader(version)
 
                         if (forge.getMixinConfig().isNotEmpty()) {
-                            mixinConfig(*forge.getMixinConfig().toTypedArray())
+                            mixinConfig(forge.getMixinConfig())
                         }
                     }
 
@@ -305,6 +306,24 @@ open class MultiMinedExtension(private val project: Project) {
                     if (loader.getShadowJar()!!.getMinimize()) {
                         it.minimize()
                     }
+
+                    var attr = mapOf(
+                        "Specification-Title" to project.name,
+                        "Specification-Version" to project.version,
+                        "Implementation-Title" to StringUtils.capitalize(sourceSet),
+                        "Implementation-Version" to project.version.toString(),
+                        "Implementation-Timestamp" to Date().toString(),
+                        "Built-On-Java" to "${System.getProperty("java.vm.version")} (${System.getProperty("java.vm.vendor")})",
+                        "Built-On-Minecraft" to mcVersion
+                    )
+
+                    if (loader.getMixinConfig().isNotEmpty()) {
+                        attr = attr + ("MixinConfig" to loader.getMixinConfig().joinToString(","))
+                    }
+
+                    it.manifest { man ->
+                        man.attributes(attr)
+                    }
                 }
 
                 // Configure RemapJar task to use ShadowJar output
@@ -342,7 +361,7 @@ open class MultiMinedExtension(private val project: Project) {
 
     open class LoaderConfiguration(var name: String) {
         private var version: String? = null
-        private var mixinConfig: List<String> = emptyList()
+        private var mixinConfig: MutableList<String> = emptyList<String>().toMutableList()
         private var shadowJar: ShadowJarConfig? = null
 
         fun shadowJar(action: Action<ShadowJarConfig>) {
@@ -351,7 +370,7 @@ open class MultiMinedExtension(private val project: Project) {
         }
 
         fun mixinConfig(vararg configs: String) {
-            mixinConfig = configs.toList()
+            mixinConfig.addAll(configs.toList())
         }
 
         fun version(v: String) {
