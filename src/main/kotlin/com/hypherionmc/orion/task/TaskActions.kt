@@ -31,7 +31,7 @@ object TaskActions {
      * @param project The Gradle Project that is currently being processed
      */
     fun cleanWorkspace(logger: Logger, project: Project) {
-        project.delete(Constants.patcherWorkdir, Constants.patcherUpstream, File(Constants.patcherWorkdir.toFile(), "tmp"), File(project.rootProject.rootDir, ".orion"))
+        project.delete(Constants.patcherWorkdir(project), Constants.patcherUpstream(project), File(Constants.patcherWorkdir(project).toFile(), "tmp"), File(project.rootProject.rootDir, ".orion"))
         logger.lifecycle("\uD83E\uDDF9 Cleaned up working directories")
     }
 
@@ -70,12 +70,12 @@ object TaskActions {
         project.logger.lifecycle("⚡ Setting up workspace")
 
         // Clean the working directories
-        project.delete(Constants.patcherWorkdir, Constants.patcherUpstream)
+        project.delete(Constants.patcherWorkdir(project), Constants.patcherUpstream(project))
 
         // Check if current branch already has an upstream commit linked to it, and pull that instead
         var lastCommitId: String? = null
-        if (Constants.patcherCommit.exists()) {
-            lastCommitId = FileUtils.readFileToString(Constants.patcherCommit, StandardCharsets.UTF_8)
+        if (Constants.patcherCommit(project).exists()) {
+            lastCommitId = FileUtils.readFileToString(Constants.patcherCommit(project), StandardCharsets.UTF_8)
         }
 
         Patcher.checkoutUpstreamBranch(project, extension.upstreamBranch.get(), extension, lastCommitId, true)
@@ -88,7 +88,7 @@ object TaskActions {
      * @param extension The OrionPortingExtension that was configured for use in this task
      */
     fun splitSources(project: Project, extension: OrionPortingExtension) {
-        if (!Files.exists(Constants.patcherWorkdir))
+        if (!Files.exists(Constants.patcherWorkdir(project)))
             throw GradleException("Working directory does not exist")
 
         project.logger.lifecycle("⚡ Splitting sources into individual directories")
@@ -98,7 +98,7 @@ object TaskActions {
             if (f.exists())
                 FileUtils.deleteQuietly(f)
 
-            FileUtils.copyDirectory(Constants.patcherWorkdir.resolve(b).toFile(), f)
+            FileUtils.copyDirectory(Constants.patcherWorkdir(project).resolve(b).toFile(), f)
         }
     }
 

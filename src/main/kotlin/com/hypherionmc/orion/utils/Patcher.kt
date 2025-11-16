@@ -60,7 +60,7 @@ object Patcher {
 
                 try {
                     val fileData = repository.open(objectId).bytes
-                    val targetFile = File(repository.workTree, Constants.patcherUpstream.toString() + File.separator + filePath)
+                    val targetFile = File(repository.workTree, Constants.patcherUpstream(project).toString() + File.separator + filePath)
                     targetFile.parentFile.mkdirs()
 
                     FileOutputStream(targetFile).use { fos -> fos.write(fileData) }
@@ -76,7 +76,7 @@ object Patcher {
 
         // If this is a fresh pull or update, write the commit hash for later retrieval
         if (commitId == null) {
-            FileUtils.write(Constants.patcherCommit, devBranchId.name(), StandardCharsets.UTF_8)
+            FileUtils.write(Constants.patcherCommit(project), devBranchId.name(), StandardCharsets.UTF_8)
             repository.close()
         }
 
@@ -97,8 +97,8 @@ object Patcher {
     fun generatePatches(project: Project, workingDir: String) {
         val builder = DiffOperation.builder()
             .logTo(LoggingOutputStream(project.logger, LogLevel.LIFECYCLE))
-            .aPath(Constants.patcherUpstream)
-            .bPath(File(project.rootProject.rootDir, Constants.patcherWorkdir.toString() + File.separator + workingDir).toPath())
+            .aPath(Constants.patcherUpstream(project))
+            .bPath(File(Constants.patcherWorkdir(project).toFile(), workingDir).toPath())
             .outputPath(File(project.rootProject.rootDir, ".orion/patches/${workingDir}").toPath())
             .autoHeader(false)
             .summary(true)
@@ -136,7 +136,7 @@ object Patcher {
         val patchPack = File(project.rootProject.rootDir, "versions/patches.patchpack")
         val base = File(project.rootProject.rootDir, ".orion/upstream")
         val patches = File(project.rootProject.rootDir, ".orion/patches/$workingDir")
-        val out = File(project.rootProject.rootDir, Constants.patcherWorkdir.toString() + File.separator + workingDir)
+        val out = File(Constants.patcherWorkdir(project).toFile(), workingDir)
         val rejects = File(project.rootProject.rootDir, "rejects/$workingDir")
 
         if (patchPack.exists() && !File(project.rootProject.rootDir, ".orion/patches").exists()) {
@@ -146,7 +146,7 @@ object Patcher {
         // Check if any patches have been generated. If not, we copy the upstream folder to the dev folder
         if (!hasPatches(patches)) {
             project.logger.lifecycle("⚡ Copying upstream branch into {} directory", workingDir)
-            FileUtils.copyDirectory(Constants.patcherUpstream.toFile(), out)
+            FileUtils.copyDirectory(Constants.patcherUpstream(project).toFile(), out)
             return
         }
 

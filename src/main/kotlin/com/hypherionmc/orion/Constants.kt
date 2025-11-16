@@ -7,9 +7,9 @@
 package com.hypherionmc.orion
 
 import com.hypherionmc.orion.plugin.OrionPlugin
+import org.gradle.api.Project
 import java.io.File
 import java.nio.file.Path
-import java.nio.file.Paths
 
 object Constants {
     
@@ -30,7 +30,15 @@ object Constants {
     const val MAVEN_CENTRAL_URL: String = "https://mcentral.firstdark.dev/releases"
 
     // Porting Patcher
-    @JvmField val patcherUpstream: Path = Paths.get(".orion", "upstream")
-    @JvmField val patcherWorkdir: Path = Paths.get("workspace")
-    @JvmField val patcherCommit: File = File("commit.sha")
+    fun patcherUpstream(project: Project): Path {
+        return project.rootProject.rootDir.toPath().resolve(".orion").resolve("upstream")
+    }
+
+    fun patcherWorkdir(project: Project): Path {
+        return project.rootProject.rootDir.toPath().resolve("workspace")
+    }
+
+    fun patcherCommit(project: Project): File {
+        return project.rootProject.rootDir.resolve("commit.sha")
+    }
 }
