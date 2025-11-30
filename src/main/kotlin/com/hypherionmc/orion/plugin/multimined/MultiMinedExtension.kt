@@ -1,6 +1,7 @@
 package com.hypherionmc.orion.plugin.multimined
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.hypherionmc.orion.plugin.OrionExtension
 import com.hypherionmc.orion.utils.GradleUtils
 import com.hypherionmc.orion.utils.unimined.PaperMCTransformer
 import org.apache.commons.lang3.StringUtils
@@ -137,6 +138,7 @@ open class MultiMinedExtension(private val project: Project) {
         private fun setupMavenPublishing() {
             project.afterEvaluate {
                 val publishing = project.extensions.findByType(PublishingExtension::class.java) ?: return@afterEvaluate
+                val orion = project.extensions.findByType(OrionExtension::class.java) ?: return@afterEvaluate
                 val publications = publishing.publications
 
                 shadowJar?.let {
@@ -182,6 +184,11 @@ open class MultiMinedExtension(private val project: Project) {
                             it.builtBy(project.tasks.named("remapPaperJar"))
                         }
                     }
+                }
+
+                publishing.repositories.maven { repo ->
+                    repo.name = "maven2"
+                    orion.getPublishingMaven().execute(repo)
                 }
             }
         }
