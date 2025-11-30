@@ -4,11 +4,11 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.hypherionmc.orion.utils.GradleUtils
 import com.hypherionmc.orion.utils.unimined.PaperMCTransformer
 import org.apache.commons.lang3.StringUtils
-import org.apache.maven.artifact.versioning.ArtifactVersion
-import org.apache.maven.artifact.versioning.VersionRange
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.jvm.tasks.Jar
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -16,7 +16,7 @@ import org.gradle.util.internal.VersionNumber
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import java.util.Date
+import java.util.*
 import javax.inject.Inject
 
 open class MultiMinedExtension(private val project: Project) {
@@ -64,7 +64,9 @@ open class MultiMinedExtension(private val project: Project) {
 
     open class SetupBlock @Inject constructor(private val project: Project) {
         var multiLoader: Boolean = false
+        val publishMaven: Boolean = false
         private var mcVersion: String? = null
+        private var shadowJar: ShadowJarConfig? = null
 
         private var fabric: LoaderConfiguration = LoaderConfiguration("fabric")
         private var neoforge: LoaderConfiguration = LoaderConfiguration("neoforge")
@@ -112,14 +114,76 @@ open class MultiMinedExtension(private val project: Project) {
             action.execute(paper)
         }
 
+        fun shadowJar(action: Action<ShadowJarConfig>) {
+            shadowJar = ShadowJarConfig()
+            action.execute(shadowJar!!)
+        }
+
+        fun getShadowJar(): ShadowJarConfig? {
+            return shadowJar
+        }
+
         fun applySetup() {
             if (multiLoader) {
                 setupSourceSets()
+                setupMavenPublishing()
             }
         }
 
         private fun getOrCreateShadowConfig(): Configuration {
             return project.configurations.findByName("shade") ?: project.configurations.create("shade")
+        }
+
+        private fun setupMavenPublishing() {
+            project.afterEvaluate {
+                val publishing = project.extensions.findByType(PublishingExtension::class.java) ?: return@afterEvaluate
+                val publications = publishing.publications
+
+                shadowJar?.let {
+                    publications.create("mavenCommon", MavenPublication::class.java) { publication ->
+                        publication.artifactId = "${project.name}-Common-${mcVersion}"
+                        publication.artifact(project.tasks.named("mainShadowJar")) {
+                            it.builtBy(project.tasks.named("mainShadowJar"))
+                        }
+                    }
+                }
+
+                fabric.getVersion()?.let {
+                    publications.create("mavenFabric", MavenPublication::class.java) { publication ->
+                        publication.artifactId = "${project.name}-Fabric-${mcVersion}"
+                        publication.artifact(project.tasks.named("remapFabricJar")) {
+                            it.builtBy(project.tasks.named("remapFabricJar"))
+                        }
+                    }
+                }
+
+                neoforge.getVersion()?.let {
+                    publications.create("mavenNeoForge", MavenPublication::class.java) { publication ->
+                        publication.artifactId = "${project.name}-Neoforge-${mcVersion}"
+                        publication.artifact(project.tasks.named("remapNeoforgeJar")) {
+                            it.builtBy(project.tasks.named("remapNeoforgeJar"))
+                        }
+                    }
+                }
+
+                forge.getVersion()?.let {
+                    publications.create("mavenForge", MavenPublication::class.java) { publication ->
+                        publication.artifactId = "${project.name}-Forge-${mcVersion}"
+                        publication.artifact(project.tasks.named("remapForgeJar")) {
+                            it.builtBy(project.tasks.named("remapForgeJar"))
+                        }
+                    }
+                }
+
+                paper.getVersion()?.let {
+                    publications.create("mavenPaper", MavenPublication::class.java) { publication ->
+                        publication.artifactId = "${project.name}-Paper-${mcVersion}"
+                        publication.artifact(project.tasks.named("remapPaperJar")) {
+                            it.builtBy(project.tasks.named("remapPaperJar"))
+                        }
+                    }
+                }
+            }
         }
 
         private fun setupSourceSets() {
@@ -162,6 +226,74 @@ open class MultiMinedExtension(private val project: Project) {
 
                     defaultRemapJar = false
                     project.configurations.getByName("compileOnly").extendsFrom(getOrCreateShadowConfig())
+                }
+            }
+
+            // ShadowJar for common, if needed
+            shadowJar?.let { shadow ->
+                project.afterEvaluate { p ->
+                    val shadowTask = project.tasks.register("mainShadowJar", ShadowJar::class.java) {
+                        it.configurations.set(listOf(p.configurations.getByName("shade")))
+                        it.archiveClassifier.set("")
+                        it.from(main.output)
+                        it.archiveBaseName.set("${project.name}-Common-${mcVersion}")
+
+                        val mavenRegex = Regex("""^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+(\*|\.\*)?$""")
+
+                        if (shadow.getExclude().isNotEmpty() || shadow.getRelocate().isNotEmpty()) {
+                            // Configure dependencies to exclude
+                            it.dependencies { excl ->
+                                if (shadow.getExclude().isNotEmpty()) {
+                                    shadow
+                                        .getExclude()
+                                        .filter { p -> mavenRegex.matches(p) }
+                                        .forEach { p -> excl.exclude(excl.dependency(p)) }
+                                }
+                            }
+
+                            if (shadow.getExclude().isNotEmpty()) {
+                                shadow
+                                    .getExclude()
+                                    .filter { p -> !mavenRegex.matches(p) }
+                                    .forEach { p -> it.exclude(p) }
+                            }
+
+                            // Configure dependencies to relocate
+                            if (shadow.getRelocate().isNotEmpty()) {
+                                shadow.getRelocate().forEach { (from, to) -> it.relocate(from, to) }
+                            }
+                        }
+
+                        // Configure Service File Merging
+                        if (shadow.getMergeServiceFiles()) {
+                            it.mergeServiceFiles()
+                        }
+
+                        // Minimize the output file
+                        if (shadow.getMinimize()) {
+                            it.minimize()
+                        }
+
+                        val attr = mapOf(
+                            "Specification-Title" to project.name,
+                            "Specification-Version" to project.version,
+                            "Implementation-Title" to "Main",
+                            "Implementation-Version" to project.version.toString(),
+                            "Implementation-Timestamp" to Date().toString(),
+                            "Built-On-Java" to "${System.getProperty("java.vm.version")} (${System.getProperty("java.vm.vendor")})",
+                            "Built-On-Minecraft" to mcVersion
+                        )
+
+                        it.manifest { man ->
+                            man.attributes(attr)
+                        }
+                    }
+
+                    // Make the shadowJar the default output for the main jar task
+                    project.tasks.withType(Jar::class.java).named("jar") {
+                        it.archiveBaseName.set("${project.name}-Common-${mcVersion}")
+                        it.finalizedBy(shadowTask)
+                    }
                 }
             }
 
@@ -388,44 +520,44 @@ open class MultiMinedExtension(private val project: Project) {
         fun getShadowJar(): ShadowJarConfig? {
             return shadowJar
         }
+    }
 
-        open class ShadowJarConfig {
-            private var exclude: MutableList<String> = emptyList<String>().toMutableList()
-            private var minimize: Boolean = false
-            private var mergeServiceFiles: Boolean = false
-            private var relocate: MutableList<Pair<String, String>> = emptyList<Pair<String, String>>().toMutableList()
+    open class ShadowJarConfig {
+        private var exclude: MutableList<String> = emptyList<String>().toMutableList()
+        private var minimize: Boolean = false
+        private var mergeServiceFiles: Boolean = false
+        private var relocate: MutableList<Pair<String, String>> = emptyList<Pair<String, String>>().toMutableList()
 
-            fun exclude(vararg packages: String) {
-                exclude.addAll(packages.toList())
-            }
+        fun exclude(vararg packages: String) {
+            exclude.addAll(packages.toList())
+        }
 
-            fun minimize() {
-                minimize = true
-            }
+        fun minimize() {
+            minimize = true
+        }
 
-            fun mergeServiceFiles() {
-                mergeServiceFiles = true
-            }
+        fun mergeServiceFiles() {
+            mergeServiceFiles = true
+        }
 
-            fun relocate(vararg relocations: Pair<String, String>) {
-                relocate.addAll(relocations.toList())
-            }
+        fun relocate(vararg relocations: Pair<String, String>) {
+            relocate.addAll(relocations.toList())
+        }
 
-            fun getExclude(): List<String> {
-                return exclude
-            }
+        fun getExclude(): List<String> {
+            return exclude
+        }
 
-            fun getMinimize(): Boolean {
-                return minimize
-            }
+        fun getMinimize(): Boolean {
+            return minimize
+        }
 
-            fun getMergeServiceFiles(): Boolean {
-                return mergeServiceFiles
-            }
+        fun getMergeServiceFiles(): Boolean {
+            return mergeServiceFiles
+        }
 
-            fun getRelocate(): List<Pair<String, String>> {
-                return relocate
-            }
+        fun getRelocate(): List<Pair<String, String>> {
+            return relocate
         }
     }
 
