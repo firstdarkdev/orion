@@ -157,7 +157,8 @@ object GradleUtils {
 
                 for (f in Arrays.stream(files).filter { f -> !f.isDirectory }.collect(Collectors.toList())) {
                     // We don't want junk jars, so we exclude it
-                    if (f.name.contains("-dev-shadow") || f.name.contains("-dev") || f.name.contains("-all") || f.name.contains("-slim")) {
+                    if (f.name.contains("-dev-shadow") || f.name.contains("-dev")
+                        || f.name.contains("-all") || f.name.contains("-slim") || f.name.contains("-Common")) {
                         f.delete()
                         continue
                     }
