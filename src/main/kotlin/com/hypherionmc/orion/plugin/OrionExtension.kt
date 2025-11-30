@@ -57,6 +57,9 @@ open class OrionExtension(pp: Project) {
 
         if (project.hasProperty("version_build"))
             versioning.build(Integer.parseInt(project.properties["version_build"].toString()))
+
+        if (project.hasProperty("releaseType"))
+            versioning.identifier(project.properties["releaseType"].toString())
     }
 
     /**
