@@ -244,6 +244,7 @@ open class MultiMinedExtension(private val project: Project) {
                         it.archiveClassifier.set("")
                         it.from(main.output)
                         it.archiveBaseName.set("${project.name}-Common-${mcVersion}")
+                        it.addMultiReleaseAttribute.set(false)
 
                         val mavenRegex = Regex("""^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+(\*|\.\*)?$""")
 
@@ -294,12 +295,15 @@ open class MultiMinedExtension(private val project: Project) {
                         it.manifest { man ->
                             man.attributes(attr)
                         }
+
+                        it.manifest.attributes.remove("Multi-Release")
                     }
 
                     // Make the shadowJar the default output for the main jar task
                     project.tasks.withType(Jar::class.java).named("jar") {
                         it.archiveBaseName.set("${project.name}-Common-${mcVersion}")
                         it.finalizedBy(shadowTask)
+                        it.manifest.attributes.remove("Multi-Release")
                     }
                 }
             }
@@ -405,6 +409,7 @@ open class MultiMinedExtension(private val project: Project) {
                 val shadowTask = project.tasks.register("${sourceSet}ShadowJar", ShadowJar::class.java) {
                     it.configurations.set(listOf(project.configurations.getByName("shade")))
                     it.archiveClassifier.set("${sourceSet}-dev-shadow")
+                    it.addMultiReleaseAttribute.set(false)
 
                     // Use Compiled Output as inputs for ShadowJar
                     if (!isPaperJar) it.from(sourceSets.getByName("main").output)
@@ -463,6 +468,8 @@ open class MultiMinedExtension(private val project: Project) {
                     it.manifest { man ->
                         man.attributes(attr)
                     }
+
+                    it.manifest.attributes.remove("Multi-Release")
                 }
 
                 // Configure RemapJar task to use ShadowJar output
@@ -470,6 +477,7 @@ open class MultiMinedExtension(private val project: Project) {
                     it.inputFile.set(shadowTask.get().archiveFile)
                     it.asJar.archiveClassifier.set(null as String?)
                     it.asJar.archiveBaseName.set("${project.name}-${StringUtils.capitalize(sourceSet)}-${mcVersion}")
+                    it.asJar.manifest.attributes.remove("Multi-Release")
 
                     val mcVer = VersionNumber.parse(mcVersion)
                     val notObfedMc = VersionNumber.parse("1.20.5")
@@ -485,6 +493,7 @@ open class MultiMinedExtension(private val project: Project) {
 
                 project.tasks.withType(Jar::class.java).named("${sourceSet}Jar") {
                     it.archiveClassifier.set("${sourceSet}-slim")
+                    it.manifest.attributes.remove("Multi-Release")
                 }
 
                 // Process Resources
