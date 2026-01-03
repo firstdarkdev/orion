@@ -27,7 +27,7 @@ open class PaperMCTransformer(project: Project,
 
     override var paper: File by FinalizeOnRead(LazyMutable {
         project.cachingDownload(
-            URI.create("https://mcentral.firstdark.dev/releases/projects/paper/versions/${provider.version}/builds/$build/downloads/paper-${provider.version}-$build.jar"),
+            URI.create("https://api.papermc.io/v2/projects/paper/versions/${provider.version}/builds/$build/downloads/paper-${provider.version}-$build.jar"),
             cachePath = project.unimined.getGlobalCache().resolve("paper/${provider.version}/paper-${provider.version}-${build}.jar")
         ).toFile()
     })

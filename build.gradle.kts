@@ -1,7 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    kotlin("jvm") version "2.1.0"
+    kotlin("jvm") version "2.3.0"
     id("java")
     id("idea")
     id("com.gradleup.shadow") version "9.2.0"
@@ -54,8 +54,9 @@ dependencies {
     shadeMe("org.apache.commons:commons-compress:1.26.2")
     shadeMe("org.eclipse.jgit:org.eclipse.jgit:${jgit}")
     shadeMe("commons-io:commons-io:${commons_io}")
-    shadeMe("com.github.javaparser:javaparser-core:3.24.0")
-    shadeMe("com.hypherionmc:jarmanager:1.0.5")
+    shadeMe("com.hypherionmc:jarmanager:1.0.5") {
+        exclude(group = "org.ow2.asm")
+    }
     shadeMe("org.tomlj:tomlj:1.1.1")
     shadeMe("org.apache.maven:maven-artifact:4.0.0-rc-3")
 
@@ -66,9 +67,11 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:${lombok}")
 
     // Unimined
-    compileOnly("xyz.wagyourtail.unimined:unimined:1.4.2-SNAPSHOT")
-    compileOnly("xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm:1.2.1")
-    compileOnly("com.gradleup.shadow:shadow-gradle-plugin:9.2.0")
+    compileOnly("dev.firstdark.unimined:unimined:1.0.0+1.4.2-SNAPSHOT")
+    compileOnly("xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm:1.2.1") {
+        exclude(group = "org.ow2.asm")
+    }
+    compileOnly("com.gradleup.shadow:shadow-gradle-plugin:9.3.0")
     compileOnly("io.sigpipe:jbsdiff:1.0")
 }
 
