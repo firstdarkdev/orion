@@ -17,7 +17,6 @@ import org.gradle.util.internal.VersionNumber
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.util.*
 import javax.inject.Inject
 
@@ -219,12 +218,9 @@ open class MultiMinedExtension(private val project: Project) {
             unimined.minecraft(main, lateApply = false) {
                 version(mcVersion ?: error("No Minecraft version specified!"))
                 mappings {
-                    if (version < "26.1") {
+                    if (minecraft.obfuscated) {
                         mojmap()
                         devNamespace("mojmap")
-                    } else {
-                        devNamespace("official")
-                        devFallbackNamespace("official")
                     }
                 }
 

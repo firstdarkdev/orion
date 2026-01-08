@@ -67,7 +67,7 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:${lombok}")
 
     // Unimined
-    compileOnly("dev.firstdark.unimined:unimined:1.0.0+1.4.2-SNAPSHOT")
+    compileOnly("dev.firstdark.unimined:unimined:1.0.2+1.4.2-SNAPSHOT")
     compileOnly("xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm:1.2.1") {
         exclude(group = "org.ow2.asm")
     }
@@ -79,6 +79,9 @@ tasks.named<ShadowJar>("shadowJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     configurations = listOf(shadeMe)
     archiveClassifier.set("")
+
+    relocate("org.objectweb", "com.hypherionmc.orion.libs")
+
     mergeServiceFiles()
 }
 
