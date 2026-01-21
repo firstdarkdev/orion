@@ -20,7 +20,7 @@ object Constants {
     
     // Tool Deps
     const val AUTO_SERVICE: String = "com.google.auto.service:auto-service:1.1.1"
-    const val LOMBOK: String = "org.projectlombok:lombok:1.18.34"
+    const val LOMBOK: String = "org.projectlombok:lombok:1.18.42"
     const val NO_LOADER: String = "com.hypherionmc.noloaderthanks:noloaderthanks:1.0.6"
     const val NEOJAR: String = "com.hypherionmc.neojar:neojar:1.0.3"
 

@@ -104,8 +104,8 @@ object GradleUtils {
      * @param extension The OrionExtension that was configured
      */
     private fun applyTools(p: Project, extension: OrionExtension) {
-        if (extension.multiProject.get() && p.name.equals(p.rootProject.name, ignoreCase = true))
-            return
+        /*if (extension.multiProject.get() && p.name.equals(p.rootProject.name, ignoreCase = true))
+            return*/
 
         // Auto Service
         if (extension.tools.enableAutoService) {

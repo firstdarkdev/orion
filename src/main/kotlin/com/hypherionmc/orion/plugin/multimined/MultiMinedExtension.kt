@@ -1,13 +1,21 @@
 package com.hypherionmc.orion.plugin.multimined
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.hypherionmc.orion.Constants
 import com.hypherionmc.orion.plugin.OrionExtension
+import com.hypherionmc.orion.utils.Environment
 import com.hypherionmc.orion.utils.GradleUtils
 import com.hypherionmc.orion.utils.unimined.PaperMCTransformer
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.SourceSetContainer
@@ -16,13 +24,25 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.util.internal.VersionNumber
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.FabricLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.FabricLikeMinecraftTransformer.Companion.GSON
+import xyz.wagyourtail.unimined.util.*
+import java.io.InputStreamReader
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.util.*
 import javax.inject.Inject
+import kotlin.io.path.*
 
 open class MultiMinedExtension(private val project: Project) {
 
-    val setup: SetupBlock = project.objects.newInstance(SetupBlock::class.java, project)
+    val setup: SetupBlock = project.objects.newInstance(SetupBlock::class.java, project, this)
+    private val includeInJarConfig: Configuration? = project.configurations.maybeCreate("includeInJar")
 
     fun setup(configure: SetupBlock.() -> Unit) {
         setup.configure()
@@ -36,6 +56,16 @@ open class MultiMinedExtension(private val project: Project) {
     fun forge(dep: Any) = addIfExists("forgeModImplementation", dep)
     fun paper(dep: Any) = addIfExists("paperModImplementation", dep)
     fun fabricApi() = addIfExists("fabricModImplementation", "net.fabricmc.fabric-api:fabric-api:${GradleUtils.getProperty(project, "fabric_api")}")
+    fun commonInclude(dep: Any) = run {
+        project.dependencies.add(includeInJarConfig?.name, dep)
+        addIfExists("implementation", dep)
+        addIfExists("fabricCompileOnly", dep)
+        addIfExists("neoforgeCompileOnly", dep)
+        addIfExists("forgeCompileOnly", dep)
+        addIfExists("apiImplementation", dep)
+    }
+
+    fun api(dep: Any) = addIfExists("apiImplementation", dep)
 
     fun shade(dep: Any) = shadowConfiguration(dep)
 
@@ -63,16 +93,18 @@ open class MultiMinedExtension(private val project: Project) {
         }
     }
 
-    open class SetupBlock @Inject constructor(private val project: Project) {
+    open class SetupBlock @Inject constructor(private val project: Project, private val extension: MultiMinedExtension) {
         var multiLoader: Boolean = false
         val publishMaven: Boolean = false
         private var mcVersion: String? = null
         private var shadowJar: ShadowJarConfig? = null
+        private var jarJarExclude: List<String> = listOf<String>().toMutableList()
 
         private var fabric: LoaderConfiguration = LoaderConfiguration("fabric")
         private var neoforge: LoaderConfiguration = LoaderConfiguration("neoforge")
         private var forge: LoaderConfiguration = LoaderConfiguration("forge")
         private var paper: LoaderConfiguration = LoaderConfiguration("paper")
+        private var api: SourceSetConfig? = null
 
         fun version(v: String) {
             mcVersion = v
@@ -120,8 +152,17 @@ open class MultiMinedExtension(private val project: Project) {
             action.execute(shadowJar!!)
         }
 
+        fun api(action: Action<SourceSetConfig>) {
+            api = SourceSetConfig()
+            action.execute(api!!)
+        }
+
         fun getShadowJar(): ShadowJarConfig? {
             return shadowJar
+        }
+
+        fun jarJarExclude(exclude: List<String>) {
+            jarJarExclude = exclude
         }
 
         fun applySetup() {
@@ -186,9 +227,24 @@ open class MultiMinedExtension(private val project: Project) {
                     }
                 }
 
+                if (orion.publishApiJar.get()) {
+                    api?.let {
+                        publications.create("mavenApi", MavenPublication::class.java) { publication ->
+                            publication.artifactId = "${project.name}-API"
+                            publication.version = project.version.toString()
+                            publication.artifact(project.tasks.named("apiShadowJar")) {
+                                it.builtBy(project.tasks.named("apiShadowJar"))
+                            }
+                        }
+                    }
+                }
+
                 publishing.repositories.maven { repo ->
-                    repo.name = "maven2"
-                    orion.getPublishingMaven().execute(repo)
+                    repo.url = URI.create(if (!orion.versioning.identifier.equals("release", ignoreCase = true)) Constants.MAVEN_SNAPSHOT_URL else Constants.MAVEN_URL)
+                    repo.credentials { c: PasswordCredentials ->
+                        c.username = Environment.getenv("MAVEN_USER")
+                        c.password = Environment.getenv("MAVEN_PASS")
+                    }
                 }
             }
         }
@@ -206,11 +262,96 @@ open class MultiMinedExtension(private val project: Project) {
             if (neoforge.getVersion() != null) sourcesList.add(neoforge.name)
             if (paper.getVersion() != null) sourcesList.add(paper.name)
             if (forge.getVersion() != null) sourcesList.add(forge.name)
+            if (api != null) sourcesList.add("api")
 
             sourcesList.forEach {
                 if (sourceSets.findByName(it) == null) {
                     sourceSets.create(it)
                 }
+            }
+
+            if (api != null) {
+                val apiSet = sourceSets.getByName("api")
+
+                fun exposeApiTo(sourceSetName: String) {
+                    val ss = sourceSets.getByName(sourceSetName)
+                    ss.compileClasspath += apiSet.output
+                    ss.runtimeClasspath += apiSet.output
+                }
+
+                sourceSets.map { it.name }.filter { it != "api" }.forEach(::exposeApiTo)
+                project.configurations.named(apiSet.compileOnlyConfigurationName).get().extendsFrom(project.configurations.getByName("compileOnly"))
+                project.configurations.named(apiSet.annotationProcessorConfigurationName).get().extendsFrom(project.configurations.getByName("annotationProcessor"))
+                project.configurations.named(apiSet.implementationConfigurationName).get().extendsFrom(project.configurations.getByName("implementation"))
+
+                project.tasks.register("apiShadowJar", ShadowJar::class.java) {
+                    it.group = "build"
+                    it.archiveClassifier.set("")
+                    it.archiveBaseName.set("${project.name}-API")
+                    it.from(sourceSets.getByName("api").output)
+
+                    val deps = mutableListOf(
+                        project.configurations.getByName("shade")
+                    )
+
+                    project.configurations.getByName("includeInJar").let { d ->
+                         deps.add(d)
+                    }
+
+                    it.configurations.set(deps)
+                    it.addMultiReleaseAttribute.set(false)
+
+                    val mavenRegex = Regex("""^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+(\*|\.\*)?$""")
+
+                    if (api!!.getShadowJar()!!.getExclude().isNotEmpty() || api!!.getShadowJar()!!.getRelocate().isNotEmpty()) {
+                        // Configure dependencies to exclude
+                        it.dependencies { excl ->
+                            if (api!!.getShadowJar()!!.getExclude().isNotEmpty()) {
+                                api!!.getShadowJar()!!
+                                    .getExclude()
+                                    .filter { p -> mavenRegex.matches(p) }
+                                    .forEach { p -> excl.exclude(excl.dependency(p)) }
+                            }
+                        }
+
+                        if (api!!.getShadowJar()!!.getExclude().isNotEmpty()) {
+                            api!!.getShadowJar()!!
+                                .getExclude()
+                                .filter { p -> !mavenRegex.matches(p) }
+                                .forEach { p -> it.exclude(p) }
+                        }
+
+                        // Configure dependencies to relocate
+                        if (api!!.getShadowJar()!!.getRelocate().isNotEmpty()) {
+                            api!!.getShadowJar()!!.getRelocate().forEach { (from, to) -> it.relocate(from, to) }
+                        }
+                    }
+
+                    // Configure Service File Merging
+                    if (api!!.getShadowJar()!!.getMergeServiceFiles()) {
+                        it.mergeServiceFiles()
+                    }
+
+                    // Minimize the output file
+                    if (api!!.getShadowJar()!!.getMinimize()) {
+                        it.minimize()
+                    }
+
+                    val attr = mapOf(
+                        "Specification-Title" to project.name,
+                        "Specification-Version" to project.version,
+                        "Implementation-Title" to "Api",
+                        "Implementation-Version" to project.version.toString(),
+                        "Implementation-Timestamp" to Date().toString(),
+                        "Built-On-Java" to "${System.getProperty("java.vm.version")} (${System.getProperty("java.vm.vendor")})",
+                    )
+
+                    it.manifest { man ->
+                        man.attributes(attr)
+                    }
+                }
+
+                //project.tasks.getByName("compileApiJava").finalizedBy(project.tasks.getByName("apiShadowJar"))
             }
 
             val main = sourceSets.getByName("main")
@@ -245,6 +386,7 @@ open class MultiMinedExtension(private val project: Project) {
                         it.configurations.set(listOf(p.configurations.getByName("shade")))
                         it.archiveClassifier.set("")
                         it.from(main.output)
+                        if (api != null) it.from(sourceSets.getByName("api").output)
                         it.archiveBaseName.set("${project.name}-Common-${mcVersion}")
                         it.addMultiReleaseAttribute.set(false)
 
@@ -332,7 +474,18 @@ open class MultiMinedExtension(private val project: Project) {
                 project.afterEvaluate { p ->
                     val shade = getOrCreateShadowConfig()
                     project.configurations.getByName("fabricCompileOnly").extendsFrom(p.configurations.getByName("compileOnly"), shade)
+                    project.configurations.getByName("fabricAnnotationProcessor").extendsFrom(project.configurations.getByName("annotationProcessor"))
                     setupTasks("fabric", fabric, sourceSets)
+                }
+            }
+
+            api?.let { v ->
+                val apis = sourceSets.getByName("api")
+
+                project.afterEvaluate { p ->
+                    getOrCreateShadowConfig()
+                    project.configurations.named(apis.compileOnlyConfigurationName).get().extendsFrom(project.configurations.getByName("compileOnly"))
+                    project.configurations.named(apis.annotationProcessorConfigurationName).get().extendsFrom(project.configurations.getByName("annotationProcessor"))
                 }
             }
 
@@ -356,6 +509,7 @@ open class MultiMinedExtension(private val project: Project) {
                 project.afterEvaluate { p ->
                     val shade = getOrCreateShadowConfig()
                     project.configurations.getByName("neoforgeCompileOnly").extendsFrom(p.configurations.getByName("compileOnly"), shade)
+                    project.configurations.getByName("neoforgeAnnotationProcessor").extendsFrom(project.configurations.getByName("annotationProcessor"))
                     setupTasks("neoforge", neoforge, sourceSets)
                 }
             }
@@ -382,6 +536,7 @@ open class MultiMinedExtension(private val project: Project) {
                 project.afterEvaluate { p ->
                     val shade = getOrCreateShadowConfig()
                     project.configurations.getByName("forgeCompileOnly").extendsFrom(p.configurations.getByName("compileOnly"), shade)
+                    project.configurations.getByName("forgeAnnotationProcessor").extendsFrom(project.configurations.getByName("annotationProcessor"))
                     setupTasks("forge", forge, sourceSets)
                 }
             }
@@ -402,6 +557,7 @@ open class MultiMinedExtension(private val project: Project) {
                     val shade = getOrCreateShadowConfig()
                     project.dependencies.add("paperCompileOnly","io.papermc.paper:paper-api:${mcVersion}-R0.1-SNAPSHOT")
                     project.configurations.getByName("paperCompileOnly").extendsFrom(p.configurations.getByName("compileOnly"), shade)
+                    project.configurations.getByName("paperAnnotationProcessor").extendsFrom(project.configurations.getByName("annotationProcessor"))
                     setupTasks("paper", paper, sourceSets, true)
                 }
             }
@@ -418,6 +574,7 @@ open class MultiMinedExtension(private val project: Project) {
 
                     // Use Compiled Output as inputs for ShadowJar
                     if (!isPaperJar) it.from(sourceSets.getByName("main").output)
+                    if (api != null) it.from(sourceSets.getByName("api").output)
                     it.from(sourceSets.getByName(sourceSet).output)
 
                     val mavenRegex = Regex("""^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+(\*|\.\*)?$""")
@@ -477,6 +634,14 @@ open class MultiMinedExtension(private val project: Project) {
                     it.manifest.attributes.remove("Multi-Release")
                 }
 
+                shadowTask.get().doLast {
+                    if (loader.name.equals("forge", true) || loader.name.equals("neoforge", true)) {
+                        doJarJar(shadowTask.get().archiveFile.get().asFile.toPath())
+                    } else  if (loader.name.equals("fabric", true)) {
+                        insertIncludes(loader, shadowTask.get().archiveFile.get().asFile.toPath())
+                    }
+                }
+
                 // Configure RemapJar task to use ShadowJar output
                 project.tasks.withType(RemapJarTask::class.java).named("remap${StringUtils.capitalize(sourceSet)}Jar") {
                     it.inputFile.set(shadowTask.get().archiveFile)
@@ -500,27 +665,227 @@ open class MultiMinedExtension(private val project: Project) {
                     it.archiveClassifier.set("${sourceSet}-slim")
                     it.manifest.attributes.remove("Multi-Release")
                 }
-
-                // Process Resources
-                project.tasks.withType(ProcessResources::class.java).named("process${StringUtils.capitalize(sourceSet)}Resources") {
-                    val buildProps = project.properties.toMutableMap()
-                    it.filesMatching(listOf("fabric.mod.json", "META-INF/neoforge.mods.toml", "META-INF/mods.toml", "paper-plugin.yml", "pack.mcmeta")) { f ->
-                        f.expand(buildProps)
+            } else {
+                project.tasks.withType(RemapJarTask::class.java).named("remap${StringUtils.capitalize(sourceSet)}Jar") { itt ->
+                    itt.doLast {
+                        if (loader.name.equals("forge", true) || loader.name.equals("neoforge", true)) {
+                            doJarJar(itt.asJar.archiveFile.get().asFile.toPath())
+                        } else if (loader.name.equals("fabric", true)) {
+                            insertIncludes(loader, itt.asJar.archiveFile.get().asFile.toPath())
+                        }
                     }
                 }
             }
+
+            // Process Resources
+            project.tasks.withType(ProcessResources::class.java).named("process${StringUtils.capitalize(sourceSet)}Resources") {
+                val buildProps = project.properties.toMutableMap()
+                it.filesMatching(listOf("fabric.mod.json", "META-INF/neoforge.mods.toml", "META-INF/mods.toml", "paper-plugin.yml", "pack.mcmeta")) { f ->
+                    f.expand(buildProps)
+                }
+            }
+        }
+
+        private fun doJarJar(output: Path) {
+            val includeConfig = project.configurations.findByName("includeInJar") ?: return
+            val deps = includeConfig.incoming.artifacts.resolvedArtifacts.get().filter {
+                j -> !jarJarExclude.contains(j.getCoords().group) && !jarJarExclude.contains(j.getCoords().artifact) && !jarJarExclude.contains("${j.getCoords().group}:${j.getCoords().artifact}") }
+                .toList()
+
+            if (deps.isEmpty())
+                return
+
+            output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
+                val json = JsonObject()
+                val jarDir = fs.getPath("META-INF/jarjar/")
+                val mod = jarDir.resolve("metadata.json")
+                jarDir.createDirectories()
+
+                var errored = false
+
+                for (dep in deps) {
+                    val location = dep.getCoords()
+
+                    if (location.version == null) {
+                        error("Attempted to nest dependency with unknown version ${dep.variant.owner}")
+                    }
+
+                    try {
+                        val path = jarDir.resolve(location.fileName)
+                        if (!path.exists()) {
+                            dep.file.toPath()
+                                .copyTo(jarDir.resolve(location.fileName), true)
+                        }
+
+                        addIncludeToMetadata(json, location, "META-INF/jarjar/${location.fileName}")
+                    } catch (e: Exception) {
+                        project.logger.error("Failed on $dep", e)
+                        errored = true
+                    }
+                }
+                if (errored) {
+                    throw IllegalStateException("An error occured resolving includes")
+                }
+
+                mod.writeBytes(FabricLikeMinecraftTransformer.GSON.toJson(json).toByteArray())
+            }
+        }
+
+        fun getLocalCache(): Path {
+            return project.projectDir.toPath().resolve(".gradle").resolve("orion").resolve("local")
+                .createDirectories()
+        }
+
+        private fun insertIncludes(loader: LoaderConfiguration, output: Path) {
+            val includeConfig = project.configurations.findByName("includeInJar") ?: return
+            val deps = includeConfig.incoming.artifacts.resolvedArtifacts.get().filter {
+                    j -> !jarJarExclude.contains(j.getCoords().group) && !jarJarExclude.contains(j.getCoords().artifact) && !jarJarExclude.contains("${j.getCoords().group}:${j.getCoords().artifact}") }
+                .toList()
+            if (deps.isEmpty()) {
+                return
+            }
+            output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
+                val includeCache = getLocalCache().resolve("includeCache${loader.name}")
+                val jars = fs.getPath("META-INF/jars")
+
+                val mod = fs.getPath("fabric.mod.json")
+                if (!Files.exists(mod)) {
+                    throw IllegalStateException("fabric.mod.json not found in jar")
+                }
+                val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(mod))).asJsonObject
+
+                Files.createDirectories(jars)
+                Files.createDirectories(includeCache)
+                var errored = false
+                for (dep in deps) {
+                    val location = dep.getCoords()
+
+                    if (location.version == null) {
+                        error("Attempted to nest dependency with unknown version ${dep.variant.owner}")
+                    }
+
+                    if (location.extension != "jar") {
+                        project.logger.info("Skipping $location because it is not a jar")
+                    } else {
+                        project.logger.info("Adding $location to jar")
+                    }
+                    try {
+                        val source = dep.file.toPath()
+                        val path = jars.resolve(location.fileName)
+                        if (!source.zipContains("fabric.mod.json")) {
+                            val cachePath = includeCache.resolve("${source.nameWithoutExtension}-${source.getShortSha1()}.${source.extension}")
+                            if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
+                                try {
+                                    ZipArchiveOutputStream(
+                                        cachePath.outputStream(
+                                            StandardOpenOption.CREATE,
+                                            StandardOpenOption.TRUNCATE_EXISTING
+                                        )
+                                    ).use { out ->
+                                        source.forEntryInZip { entry, stream ->
+                                            out.putArchiveEntry(entry)
+                                            stream.copyTo(out)
+                                            out.closeArchiveEntry()
+                                        }
+                                        out.putArchiveEntry(ZipArchiveEntry("fabric.mod.json").also { entry ->
+                                            entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
+                                        })
+                                        val innerjson = JsonObject()
+                                        innerjson.addProperty("schemaVersion", 1)
+                                        var artifactString = ""
+                                        if (location.group != null) {
+                                            artifactString += location.group + "_"
+                                        }
+                                        artifactString += location.artifact
+                                        if (location.classifier != null) {
+                                            artifactString += "_${location.classifier}"
+                                        }
+                                        if (artifactString.length > 64) {
+                                            artifactString = artifactString.substring(0, 50) + artifactString.getSha256(0, 14)
+                                        }
+                                        innerjson.addProperty("id", artifactString.replace(".", "_").lowercase())
+                                        innerjson.addProperty("version",location.version)
+                                        innerjson.addProperty("name", location.artifact)
+                                        val custom = JsonObject()
+                                        custom.addProperty("fabric-loom:generated", true)
+                                        custom.addProperty("unimined:generated", true)
+                                        innerjson.add("custom", custom)
+                                        out.write(GSON.toJson(innerjson).toByteArray())
+                                        out.closeArchiveEntry()
+                                    }
+                                } catch (e: Exception) {
+                                    project.logger.error(
+                                        "Failed to create fabric.mod.json stub for ${source.absolutePathString()}.",
+                                        e
+                                    )
+                                    throw e
+                                }
+                            }
+                            cachePath.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
+                        } else {
+                            source.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
+                        }
+
+                        addIncludeToModJson(json, path.toString().removePrefix("/"))
+                    } catch (e: Exception) {
+                        project.logger.error("Failed on $dep", e)
+                        errored = true
+                    }
+                }
+                if (errored) {
+                    throw IllegalStateException("An error occurred resolving includes")
+                }
+                Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
+            }
+        }
+
+        fun addIncludeToModJson(json: JsonObject, path: String) {
+            var jars = json.get("jars")?.asJsonArray
+            if (jars == null) {
+                jars = JsonArray()
+                json.add("jars", jars)
+            }
+            jars.add(JsonObject().apply {
+                addProperty("file", path)
+            })
+        }
+
+        private fun addIncludeToMetadata(json: JsonObject, dep: MavenCoords, path: String) {
+            var jars = json.get("jars")?.asJsonArray
+            if (jars == null) {
+                jars = JsonArray()
+                json.add("jars", jars)
+            }
+            jars.add(JsonObject().apply {
+                add("identifier", JsonObject().apply {
+                    addProperty("group", dep.group)
+                    addProperty("artifact", dep.artifact)
+                })
+                add("version", JsonObject().apply {
+                    addProperty("range", "[${dep.version},)")
+                    addProperty("artifactVersion", dep.version)
+                })
+                addProperty("path", path)
+            })
         }
     }
 
-    open class LoaderConfiguration(var name: String) {
-        private var version: String? = null
-        private var mixinConfig: MutableList<String> = emptyList<String>().toMutableList()
+    open class SourceSetConfig {
         private var shadowJar: ShadowJarConfig? = null
 
         fun shadowJar(action: Action<ShadowJarConfig>) {
             shadowJar = ShadowJarConfig()
             action.execute(shadowJar!!)
         }
+
+        fun getShadowJar(): ShadowJarConfig? {
+            return shadowJar
+        }
+    }
+
+    open class LoaderConfiguration(var name: String): SourceSetConfig() {
+        private var version: String? = null
+        private var mixinConfig: MutableList<String> = emptyList<String>().toMutableList()
 
         fun mixinConfig(vararg configs: String) {
             mixinConfig.addAll(configs.toList())
@@ -536,10 +901,6 @@ open class MultiMinedExtension(private val project: Project) {
 
         fun getVersion(): String? {
             return version
-        }
-
-        fun getShadowJar(): ShadowJarConfig? {
-            return shadowJar
         }
     }
 

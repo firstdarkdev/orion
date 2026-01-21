@@ -37,6 +37,7 @@ open class OrionExtension(pp: Project) {
     val multiProject: Property<Boolean> = pp.objects.property(Boolean::class.java).convention(false)
     val dopplerToken: Property<String> = pp.objects.property(String::class.java).convention("INVALID")
     val project: Project = pp
+    var publishApiJar: Property<Boolean> = pp.objects.property(Boolean::class.java).convention(true)
 
     init {
         // Build the version number for the project
