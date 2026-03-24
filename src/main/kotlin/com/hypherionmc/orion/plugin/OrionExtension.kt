@@ -139,7 +139,7 @@ open class OrionExtension(pp: Project) {
     fun unimaven(): MavenArtifactRepository {
         return project.repositories.maven {
             it.name = "unimaven"
-            it.setUrl("https://unimaven.cc")
+            it.setUrl("https://unimaven.firstdark.dev")
         }
     }
 
