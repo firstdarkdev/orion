@@ -13,7 +13,6 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Action
 import org.gradle.api.Project
-import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.provider.Property
@@ -97,7 +96,7 @@ open class OrionExtension(pp: Project) {
      * Helper method to force the plugin to configure and apply everything early
      */
     fun setup(@DelegatesTo(value = OrionExtension::class, strategy = Closure.DELEGATE_FIRST) closure: Closure<OrionExtension>) {
-        println("Configuring ${Constants.ORION_VERSION} to ${Constants.ORION_VERSION}")
+        println("Configuring ${Constants.ORION_VERSION} to ${project.name}")
         ConfigureUtil.configure(closure, this)
         postConfiguration()
     }

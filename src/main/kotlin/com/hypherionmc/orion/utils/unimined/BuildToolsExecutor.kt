@@ -77,7 +77,9 @@ class BuildToolsExecutor(
         if (!dir.exists() || project.unimined.forceReload) {
             Git.cloneRepository().setDirectory(dir.toFile()).setURI("https://mgit.firstdark.dev/SpigotMirror/${name}.git").call()
         }
+
         Git.open(dir.toFile()).use { git ->
+            git.fetch().call()
             git.checkout().setName(hash).call()
         }
     }

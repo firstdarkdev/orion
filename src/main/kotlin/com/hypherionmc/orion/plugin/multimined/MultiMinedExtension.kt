@@ -543,10 +543,12 @@ open class MultiMinedExtension(private val project: Project) {
 
             paper.getVersion()?.let { version ->
                 val ppr = sourceSets.getByName("paper")
+                var modernMc = false
 
                 unimined.minecraft(ppr, lateApply = false) {
                     combineWith(main)
                     side("server")
+                    modernMc = !this.obfuscated
 
                     customPatcher(PaperMCTransformer(project, this as MinecraftProvider)) {
                         loader(version)
@@ -555,7 +557,8 @@ open class MultiMinedExtension(private val project: Project) {
 
                 project.afterEvaluate { p ->
                     val shade = getOrCreateShadowConfig()
-                    project.dependencies.add("paperCompileOnly","io.papermc.paper:paper-api:${mcVersion}-R0.1-SNAPSHOT")
+                    val depString = if (modernMc) "io.papermc.paper:paper-api:${mcVersion}.build.+" else "io.papermc.paper:paper-api:${mcVersion}-R0.1-SNAPSHOT"
+                    project.dependencies.add("paperCompileOnly",depString)
                     project.configurations.getByName("paperCompileOnly").extendsFrom(p.configurations.getByName("compileOnly"), shade)
                     project.configurations.getByName("paperAnnotationProcessor").extendsFrom(project.configurations.getByName("annotationProcessor"))
                     setupTasks("paper", paper, sourceSets, true)

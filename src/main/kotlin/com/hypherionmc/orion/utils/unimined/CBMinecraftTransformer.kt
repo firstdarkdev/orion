@@ -91,8 +91,10 @@ open class CBMinecraftTransformer(
 
     override fun beforeMappingsResolve() {
         super.beforeMappingsResolve()
-        provider.mappings {
-            spigotProd()
+        if (provider.obfuscated) {
+            provider.mappings {
+                spigotProd()
+            }
         }
     }
 
