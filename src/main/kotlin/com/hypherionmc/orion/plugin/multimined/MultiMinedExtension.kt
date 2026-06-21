@@ -652,11 +652,8 @@ open class MultiMinedExtension(private val project: Project) {
                     it.asJar.archiveBaseName.set("${project.name}-${StringUtils.capitalize(sourceSet)}-${mcVersion}")
                     it.asJar.manifest.attributes.remove("Multi-Release")
 
-                    val mcVer = VersionNumber.parse(mcVersion)
-                    val notObfedMc = VersionNumber.parse("1.20.5")
-
-                    if (isPaperJar && (mcVer >= notObfedMc)) {
-                        it.prodNamespace("mojmap")
+                    if (isPaperJar) {
+                        it.prodNamespace(if (it.project.unimined.minecrafts[project.sourceSets.getByName(sourceSet)]!!.obfuscated) "mojmap" else "official")
                     }
 
                     it.doLast {
